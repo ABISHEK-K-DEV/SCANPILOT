@@ -85,6 +85,11 @@ export default function RootLayout() {
           <Stack.Screen name="document/[id]" options={{ title: '' }} />
           <Stack.Screen name="folder/[id]" options={{ title: 'Folder' }} />
           <Stack.Screen name="folders" options={{ title: 'Folders' }} />
+          <Stack.Screen name="scan/review" options={{ title: 'Review scan', gestureEnabled: false }} />
+          <Stack.Screen
+            name="scan/crop"
+            options={{ title: 'Adjust corners', headerStyle: { backgroundColor: '#0A1120' }, headerTintColor: '#FFFFFF', headerTitleStyle: { color: '#FFFFFF' } }}
+          />
           <Stack.Screen name="licenses" options={{ title: 'Open-source licences' }} />
           <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
         </Stack.Protected>

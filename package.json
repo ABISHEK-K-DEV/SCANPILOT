@@ -26,11 +26,13 @@
     "expo-symbols": "~58.0.4",
     "expo-system-ui": "~58.0.7",
     "expo-web-browser": "~58.0.7",
+    "jpeg-js": "^0.4.4",
     "pdf-lib": "^1.17.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
     "react-native-blob-util": "^0.25.1",
+    "react-native-document-scanner-plugin": "^2.0.4",
     "react-native-gesture-handler": "~3.3.0",
     "react-native-pdf": "^7.0.5",
     "react-native-pdf-thumbnail": "^2.0.0",
@@ -65,7 +67,8 @@
     "test:watch": "jest --watch",
     "verify": "npm run typecheck && npm run lint && npm test && npm run licenses:check",
     "licenses:check": "node scripts/check-licenses.js",
-    "test:pdf-readers": "PDF_EXPORT_DIR=.pdf-samples jest exportSamples && python3 scripts/verify-pdfs.py .pdf-samples"
+    "test:pdf-readers": "PDF_EXPORT_DIR=.pdf-samples jest exportSamples && python3 scripts/verify-pdfs.py .pdf-samples",
+    "screenshots": "node scripts/screenshots/capture.mjs"
   },
   "private": true,
   "jest": {

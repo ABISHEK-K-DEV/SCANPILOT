@@ -5,7 +5,8 @@ import { MIN_TOUCH, useAppTheme } from '@/theme';
 import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
+/** `onPrimary`: translucent button for use on a primary-coloured surface. */
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'onPrimary';
 
 interface ButtonProps {
   label: string;
@@ -38,6 +39,7 @@ export function Button({
     secondary: { bg: colors.surface, pressed: colors.surfacePressed, fg: colors.text, border: colors.border },
     ghost: { bg: 'transparent', pressed: colors.surfacePressed, fg: colors.primary },
     danger: { bg: colors.dangerSoft, pressed: colors.surfacePressed, fg: colors.danger },
+    onPrimary: { bg: 'rgba(255,255,255,0.18)', pressed: 'rgba(255,255,255,0.32)', fg: colors.onPrimary },
   };
   const tone = palette[variant];
   const inactive = disabled || loading;

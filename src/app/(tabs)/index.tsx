@@ -9,6 +9,7 @@ import { AppText, Button, EmptyState, ErrorState, Icon, Screen, SectionHeader } 
 import { type ToolId, TOOLS } from '@/features/tools';
 import { useDocumentActions } from '@/hooks/useDocumentActions';
 import { useImportActions } from '@/hooks/useImportActions';
+import { useScanFlow } from '@/hooks/useScanFlow';
 import { useDocuments, useFolders } from '@/hooks/useLibraryQueries';
 import { useAppTheme } from '@/theme';
 import type { ScanDocument } from '@/types/document';
@@ -46,13 +47,15 @@ export default function HomeScreen() {
   const folders = useFolders();
   const actions = useDocumentActions();
   const importer = useImportActions();
+  const scanner = useScanFlow();
 
   const contentWidth = Math.min(width, MAX_WIDTH) - spacing.lg * 2;
   const columns = contentWidth >= 560 ? 3 : 2;
   const tileWidth = (contentWidth - spacing.md * (columns - 1)) / columns;
 
   const runTool = (id: ToolId) => {
-    if (id === 'import-pdf') void importer.importPdf();
+    if (id === 'scan') scanner.startScan();
+    else if (id === 'import-pdf') void importer.importPdf();
     else if (id === 'import-images') void importer.importImages();
   };
 
@@ -87,9 +90,30 @@ export default function HomeScreen() {
             No subscription. No watermark. Your documents stay on this device.
           </AppText>
         </View>
+        <Pressable
+          onPress={() => scanner.startScan()}
+          accessibilityRole="button"
+          accessibilityLabel="Scan document"
+          accessibilityHint="Opens the camera scanner with automatic edge detection"
+          style={({ pressed }) => [
+            styles.scanButton,
+            { backgroundColor: pressed ? colors.primarySoft : colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
+          ]}
+        >
+          <View style={[styles.scanIcon, { backgroundColor: colors.primary, borderRadius: radius.md }]}>
+            <Icon name="scan" size={26} color={colors.onPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText variant="heading">Scan document</AppText>
+            <AppText variant="caption" tone="muted">
+              Auto edge detection · multi-page
+            </AppText>
+          </View>
+          <Icon name="chevron-forward" color={colors.primary} />
+        </Pressable>
         <View style={[styles.heroActions, { gap: spacing.sm }]}>
-          <Button label="Import PDF" icon="document-attach-outline" variant="secondary" onPress={importer.importPdf} style={styles.heroButton} />
-          <Button label="Images to PDF" icon="images-outline" variant="secondary" onPress={importer.importImages} style={styles.heroButton} />
+          <Button label="Import PDF" icon="document-attach-outline" variant="onPrimary" onPress={importer.importPdf} style={styles.heroButton} />
+          <Button label="Images to PDF" icon="images-outline" variant="onPrimary" onPress={importer.importImages} style={styles.heroButton} />
         </View>
       </View>
 
@@ -140,6 +164,7 @@ export default function HomeScreen() {
 
       {actions.elements}
       {importer.overlay}
+      {scanner.overlay}
     </Screen>
   );
 }
@@ -151,5 +176,7 @@ const styles = StyleSheet.create({
   heroSub: { opacity: 0.9 },
   heroActions: { flexDirection: 'row', flexWrap: 'wrap' },
   heroButton: { flexGrow: 1, borderWidth: 0 },
+  scanButton: { flexDirection: 'row', alignItems: 'center' },
+  scanIcon: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
 });

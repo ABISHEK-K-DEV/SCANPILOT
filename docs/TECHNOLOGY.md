@@ -41,6 +41,12 @@ Constraints of the recommended plugin to design around:
 * Output is per-page JPEG files in the cache; ScanPilot's own crop/filter
   editor (Milestones 2–3) works on those images before PDF creation.
 
+**Implemented (Milestone 2).** Manual perspective correction for gallery photos
+uses a pure-TypeScript homography warp (`src/services/scan/warp.ts`) with
+jpeg-js (BSD-3-Clause) for decoding; the warped pixels are handed to the native
+image manipulator as a BMP for fast JPEG encoding. This avoids a large native
+dependency (Skia/OpenCV) and is fully unit-tested.
+
 ## 3. PDF library verification
 
 | Library | Licence | Commercial use | Notes |

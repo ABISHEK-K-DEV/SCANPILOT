@@ -42,17 +42,37 @@ independent PDF validation (poppler + pypdf), Metro export for Android & iOS,
 - [ ] Airplane mode: everything above still works
 - [ ] 200+ page / 100 MB PDF: opens, scrolls, page count backfilled
 
-## Milestone 2 — Scanner ⬜ (next)
+## Milestone 2 — Scanner ✅
 
-1. Add `react-native-document-scanner-plugin` (+ its Expo config plugin) behind `src/native/scanner` (`DocumentScanner` contract already defined).
-2. Availability check (Play services / iOS version) with graceful fallback to gallery import.
-3. Scan flow: launch ML Kit / VisionKit (edge detection, auto-capture, perspective correction, crop are native) → **Review screen**: page thumbnails, reorder (drag), rotate, delete, retake, add more pages.
-4. Manual corner adjustment for pages re-opened later: crop editor with 4 draggable handles (Reanimated + Gesture Handler) and perspective warp (native module or Skia).
-5. Document type presets (A4, receipt, card, ID, book) affecting output page size.
-6. Create PDF via `imagesToPdf`; keep original page images for non-destructive re-editing.
-7. Tests: scanner adapter mocks, review-screen reducer, page ordering.
+| Item | Status | Notes |
+| --- | --- | --- |
+| Native scanner behind `src/native/scanner` | ✅ | ML Kit Document Scanner (Android, full mode) / VisionKit (iOS) via react-native-document-scanner-plugin; lazy-loaded, typed `DocumentScanner` contract |
+| Live preview, edge detection, auto-capture, flash, perspective correction, multi-page, retake inside the scanner | ✅ | Provided by ML Kit / VisionKit system UI (not restylable) |
+| No Android CAMERA permission | ✅ | Verified in the prebuilt manifest; iOS gets `NSCameraUsageDescription` |
+| Fallback when scanner unavailable (no Play services / not linked) | ✅ | Friendly message + "Choose photos" |
+| Review screen (multi-page preview) | ✅ | Large preview, thumbnail strip, rotate left/right, crop, retake page, delete (confirm), move earlier/later, add pages (scan more / photos), rename, unsaved-changes guard |
+| Manual corner adjustment + perspective correction | ✅ | 4-handle editor; axis-aligned crops use native crop, other quads use a JS homography warp (jpeg-js decode → bilinear warp → BMP → native JPEG). ~0.4 s for a 2.8 MP page in V8; expect a few × slower on Hermes |
+| Gallery import into a scan | ✅ | Photos are normalised (EXIF, ≤2480 px) and can be corner-corrected |
+| Document types | ✅ | Original, A4, Letter, Receipt (80 mm), Business card, ID card (ID-1), Book/notes |
+| Non-destructive within a session | ✅ | Each edit writes a new file; "Original" restores the capture; orphaned files deleted immediately; session dir wiped on save/discard/cold start |
+| Tests | ✅ | Geometry, homography, warp, BMP, session reducer, PDF presets, review-screen & scan-entry UI tests |
 
-## Milestone 3 — Filters & enhancement ⬜
+**Not verified yet:** running the scanner on a real device (no Android SDK in the sandbox). Device checklist:
+
+- [ ] Home → Scan document opens ML Kit; capture 3 pages incl. auto-capture → review screen shows 3 pages
+- [ ] Retake page 2 → replaced in place; Rotate, Delete, Move work; Add pages → scan more & from photos
+- [ ] Crop a skewed gallery photo → straightened page; "Original" restores it
+- [ ] Each document type → PDF page size correct in an external reader (e.g. receipt is 80 mm wide)
+- [ ] Back with unsaved pages → discard prompt; cancel scanner → no session left behind
+- [ ] Device without Play services (or emulator without) → fallback dialog
+- [ ] iOS: VisionKit flow and camera permission prompt text
+
+### Deferred to later milestones
+* Persisting original page images with the saved PDF for re-editing after save (Milestone 3, together with the filter edit stack).
+* Automatic edge detection for *gallery* photos (ML Kit does it for camera scans) — OpenCV/VisionCamera fallback, Milestone 6 polish.
+* Drag-and-drop page reordering (arrows used now; drag lands with the Milestone 4 page organiser).
+
+## Milestone 3 — Filters & enhancement ⬜ (next)
 Colour modes (original, auto, grayscale, B/W, high contrast, clarity, photo), brightness/contrast/sharpness/saturation/exposure, strength slider, before/after, non-destructive edit stack stored in SQLite, export quality.
 
 ## Milestone 4 — PDF toolkit UI ⬜
@@ -63,6 +83,10 @@ Annotation overlay (text, highlight, underline, strike-through, pen, shapes, dat
 
 ## Milestone 6 — Security & polish ⬜
 App lock + biometrics, encrypted private folder, remove INTERNET permission from release builds, performance pass on low-RAM devices, full regression suite, native licence notices.
+
+## Screenshots
+
+`npm run screenshots` renders every screen from a demo web build (in-memory sample data, see `metro.config.js` / `src/demo/`) and writes `docs/screenshots/*.png` plus `overview.png`.
 
 ## Known limitations / decisions
 

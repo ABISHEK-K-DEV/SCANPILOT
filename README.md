@@ -6,7 +6,9 @@ ScanPilot is an offline-first document scanner and PDF toolkit for Android
 (primary) and iOS, built with React Native, Expo and strict TypeScript.
 Documents never leave the device unless the user explicitly shares or exports them.
 
-**Status:** Milestone 1 (foundation) complete — see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+**Status:** Milestones 1 (foundation) and 2 (scanner) complete — see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+
+![All screens](docs/screenshots/overview.png)
 
 | Doc | Contents |
 | --- | --- |
@@ -15,7 +17,14 @@ Documents never leave the device unless the user explicitly shares or exports th
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Layers, data model, storage layout |
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Licences of bundled software |
 
-## What works today (Milestone 1)
+## What works today
+
+**Scanner (Milestone 2)**
+* Camera scanning with Google ML Kit Document Scanner (Android) / VisionKit (iOS): live edge detection, auto-capture, flash, perspective correction, multi-page, retakes — without the Android CAMERA permission.
+* Review screen: page thumbnails, rotate, crop/adjust corners (manual perspective correction), retake, delete, reorder, add pages from camera or photos, rename.
+* Document types: Original, A4, Letter, Receipt, Business card, ID card, Book/notes.
+
+**Foundation (Milestone 1)**
 
 * Home dashboard: hero actions, tool grid, recent documents, favourites, folders.
 * Document library: grid/list views, search, favourites filter, sorting (name, date, size, recently opened), pull-to-refresh.
@@ -26,7 +35,7 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Light/dark/system theme, onboarding, privacy page, open-source licences, storage usage & temp-file cleanup.
 * Tested PDF engine (pdf-lib): images→PDF, merge, split, extract, rotate, reorder, delete, duplicate — UI arrives in Milestone 4.
 
-Tools that are not built yet (scanner, merge, split, compress, OCR…) are shown
+Tools that are not built yet (merge, split, compress, OCR…) are shown
 **disabled with a “Soon” badge** — no button silently does nothing.
 
 ## Requirements
@@ -47,7 +56,8 @@ Windows: `%LOCALAPPDATA%\Android\Sdk`) and add `$ANDROID_HOME/platform-tools` to
 
 ScanPilot uses native modules that are **not included in Expo Go**:
 `react-native-pdf`, `react-native-blob-util`, `react-native-pdf-thumbnail`
-(and, from Milestone 2, the ML Kit / VisionKit document scanner). You run the
+and `react-native-document-scanner-plugin` (ML Kit / VisionKit). On Android the
+scanner also needs **Google Play services** on the device. You run the
 app in a **development build** — your own debug APK containing these modules
 plus `expo-dev-client`. JavaScript changes still hot-reload from Metro.
 
@@ -149,6 +159,14 @@ Validate generated PDFs with independent readers (poppler `pdfinfo` + Python `py
 npm run test:pdf-readers
 ```
 
+## Screenshots
+
+```bash
+npm run screenshots
+```
+
+Builds a web demo with in-memory sample data (`SCANPILOT_DEMO=1`, see `metro.config.js` and `src/demo/` — never part of real builds), drives it with Playwright, and writes `docs/screenshots/`. The native viewer and scanner are replaced by stand-ins in this mode, so it's a design review tool, not a substitute for device testing.
+
 ## Project structure
 
 ```
@@ -164,7 +182,9 @@ src/
   hooks/               Data + action hooks used by screens
   services/            Business logic (no React): pdf, library, import, share, storage, thumbnails
   db/                  SQLite connection, migrations, repositories, query builder
-  native/              Adapters/contracts for native capabilities (scanner, OCR)
+  native/              Native adapters (scanner: ML Kit / VisionKit)
+  services/scan/       Scan session: geometry, perspective warp, page processing, PDF creation
+  demo/                Screenshot-build stand-ins (only used when SCANPILOT_DEMO=1)
   stores/              Zustand stores (settings, library revision)
   theme/               Tokens (colour, spacing, type) + useAppTheme
   features/            Tool registry, licence list
@@ -177,7 +197,7 @@ docs/                  Technology decisions, architecture
 * Files live in the app's private storage; metadata in a local SQLite database.
 * No account, no backend, no analytics or ad SDKs.
 * Imports use system pickers — no broad storage permission. Android `allowBackup` is disabled.
-* Permissions blocked in the manifest: camera (not needed yet), microphone, legacy storage, overlay.
+* Permissions blocked in the manifest: camera (ML Kit's scanner runs in Google Play services, so ScanPilot itself never needs it), microphone, legacy storage, overlay.
 
 ## Troubleshooting
 
@@ -185,6 +205,7 @@ docs/                  Technology decisions, architecture
 * **Gradle: “SDK location not found”** — set `ANDROID_HOME` or create `android/local.properties` with `sdk.dir=…`.
 * **Gradle: unsupported Java version** — use JDK 17 (`java -version`); in Android Studio set Gradle JDK to 17.
 * **Device not listed by `adb devices`** — enable USB debugging, accept the RSA prompt, try another cable.
+* **“The camera scanner needs Google Play services”** — the device has no Play services (e.g. Huawei); use “Choose photos” and the crop editor.
 * **Metro not reachable from the phone** — same Wi-Fi network, or `adb reverse tcp:8081 tcp:8081`.
 
 ## Licence

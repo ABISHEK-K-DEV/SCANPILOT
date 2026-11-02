@@ -12,6 +12,7 @@ Offline-first document scanner & PDF editor. Expo SDK 58, React Native 0.88 (New
 - Every button must work; unavailable features are shown disabled with a "Soon" badge (`src/features/tools.ts`).
 - Always include loading, empty and error states. Icon-only controls need `accessibilityLabel`.
 - `expo-file-system` `File.write/move/copy` return promises — always await (lint enforces this).
+- In `app.json`, keep `react-native-document-scanner-plugin` **before** `expo-image-picker`: Info.plist mods run in reverse order, and image-picker (`cameraPermission: false`) would otherwise delete `NSCameraUsageDescription`.
 - Expo APIs change every SDK: check the installed package's `.d.ts` files rather than memory.
 
 ## Commands

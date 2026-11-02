@@ -21,6 +21,10 @@ Gradle/CocoaPods are listed manually below.
 | Gson | Apache-2.0 | JSON used by AndroidPdfViewer | Yes (Android) |
 | react-native-blob-util | MIT | File access dependency of react-native-pdf | Yes |
 | react-native-pdf-thumbnail 2.x | MIT | First-page thumbnails (Android PdfRenderer / iOS PDFKit) | Yes |
+| react-native-document-scanner-plugin 2.0.4 | MIT | Bridge to the system document scanners | Yes |
+| Google ML Kit Document Scanner (`play-services-mlkit-document-scanner` 16.0.0) | Google APIs Terms (free, closed source) | Android scanning UI, runs inside Google Play services | Yes (Android) |
+| Apple VisionKit | Apple SDK | iOS scanning UI | System framework |
+| jpeg-js 0.4.4 | BSD-3-Clause | JPEG decoding for manual perspective correction | Yes |
 | Zustand | MIT | App state | Yes |
 | Ionicons via @expo/vector-icons | MIT | Icons | Yes |
 | SQLite (via expo-sqlite) | Public domain | Local metadata database | Yes |
@@ -37,8 +41,5 @@ Planned (not yet integrated — see `docs/TECHNOLOGY.md`):
 
 | Component | Licence | Milestone |
 | --- | --- | --- |
-| react-native-document-scanner-plugin | MIT | 2 |
-| Google ML Kit Document Scanner (Play services) | Google APIs Terms (free, closed source) | 2 |
-| Apple VisionKit | Apple SDK (system framework) | 2 |
 | @react-native-ml-kit/text-recognition | MIT | 5 |
 | Google ML Kit Text Recognition v2 (bundled models) | ML Kit Terms (free, closed source, on-device) | 5 |

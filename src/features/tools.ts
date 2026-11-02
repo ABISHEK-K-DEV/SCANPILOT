@@ -27,7 +27,7 @@ export interface ToolDefinition {
  * feature ships so the home screen and Tools tab pick it up automatically.
  */
 export const TOOLS: readonly ToolDefinition[] = [
-  { id: 'scan', label: 'Scan document', description: 'Camera scan with edge detection', icon: 'scan-outline', available: false, milestone: 2 },
+  { id: 'scan', label: 'Scan document', description: 'Camera scan with edge detection', icon: 'scan-outline', available: true, milestone: 2 },
   { id: 'import-pdf', label: 'Import PDF', description: 'Add PDFs from your device', icon: 'document-attach-outline', available: true, milestone: 1 },
   { id: 'import-images', label: 'Images to PDF', description: 'Turn photos into a PDF', icon: 'images-outline', available: true, milestone: 1 },
   { id: 'merge', label: 'Merge PDF', description: 'Combine several PDFs', icon: 'git-merge-outline', available: false, milestone: 4 },

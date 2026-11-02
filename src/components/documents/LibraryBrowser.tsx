@@ -16,6 +16,7 @@ import {
 import { useDocumentActions } from '@/hooks/useDocumentActions';
 import { useImportActions } from '@/hooks/useImportActions';
 import { useDocuments, useFolders } from '@/hooks/useLibraryQueries';
+import { useScanFlow } from '@/hooks/useScanFlow';
 import { createFolder } from '@/services/library/folderService';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useAppTheme } from '@/theme';
@@ -49,6 +50,7 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
   const folders = useFolders();
   const actions = useDocumentActions();
   const importer = useImportActions(folderId ?? null);
+  const scanner = useScanFlow();
   const showFolders = folderId === undefined && deferredSearch.trim().length === 0 && !favoritesOnly;
 
   const setSort = (value: SortOption) => void updateSetting('sort', value);
@@ -112,9 +114,9 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
       <EmptyState
         icon="documents-outline"
         title={folderId ? 'This folder is empty' : 'No documents yet'}
-        message={folderId ? 'Import files here or move documents into this folder.' : 'Import a PDF or turn photos into a PDF to get started.'}
-        actionLabel="Import PDF"
-        onAction={importer.importPdf}
+        message={folderId ? 'Scan or import files here, or move documents into this folder.' : 'Scan a document, import a PDF or turn photos into a PDF to get started.'}
+        actionLabel="Scan document"
+        onAction={() => scanner.startScan(folderId ?? null)}
       />
     );
 
@@ -146,6 +148,7 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
         title="Add to library"
         onClose={() => setSheet(null)}
         actions={[
+          { key: 'scan', label: 'Scan document', icon: 'scan-outline', onPress: () => scanner.startScan(folderId ?? null) },
           { key: 'pdf', label: 'Import PDF', icon: 'document-attach-outline', onPress: importer.importPdf },
           { key: 'images', label: 'Images to PDF', icon: 'images-outline', onPress: importer.importImages },
           ...(folderId === undefined
@@ -166,6 +169,7 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
       />
       {actions.elements}
       {importer.overlay}
+      {scanner.overlay}
     </>
   );
 }

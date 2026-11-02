@@ -68,6 +68,17 @@ describe('imagesToPdf', () => {
     expect(Math.round(portrait.getWidth())).toBe(595);
   });
 
+  it('supports receipt and card presets', async () => {
+    const receipt = await PDFDocument.load(await imagesToPdf([{ bytes: PNG_1X1 }], { pageSize: 'receipt' }));
+    expect(receipt.getPage(0).getWidth()).toBeCloseTo(226.77, 1); // 80 mm
+    expect(receipt.getPage(0).getHeight()).toBeCloseTo(226.77, 1);
+    const card = await PDFDocument.load(await imagesToPdf([{ bytes: JPEG_2X1 }], { pageSize: 'id-card', margin: 50 }));
+    expect(card.getPage(0).getWidth()).toBeCloseTo(242.65, 1); // 85.6 mm, landscape for a wide image
+    expect(card.getPage(0).getHeight()).toBeCloseTo(153.02, 1);
+    const business = await PDFDocument.load(await imagesToPdf([{ bytes: PNG_1X1 }], { pageSize: 'business-card' }));
+    expect(business.getPage(0).getWidth()).toBeCloseTo(155.91, 1); // 55 mm portrait
+  });
+
   it('rejects empty input and unsupported images', async () => {
     await expect(imagesToPdf([])).rejects.toThrow('Select at least one image.');
     await expect(imagesToPdf([{ bytes: new Uint8Array([0, 1, 2, 3]) }])).rejects.toThrow('not a JPEG or PNG');

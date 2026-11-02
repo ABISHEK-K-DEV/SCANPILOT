@@ -43,3 +43,4 @@ example
 /android
 .pdf-samples/
 coverage/
+.demo-web/

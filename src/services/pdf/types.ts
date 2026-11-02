@@ -10,7 +10,13 @@ export interface OperationOptions {
   cancelToken?: CancelToken;
 }
 
-export type ImagePageSize = 'fit' | 'a4' | 'letter';
+/**
+ * - `fit`: page matches the image aspect ratio (long edge ≈ A4 length).
+ * - `a4` / `letter`: standard paper, orientation follows the image, image centred.
+ * - `receipt`: 80 mm wide, height follows the image.
+ * - `business-card`: 85 × 55 mm; `id-card`: ISO/IEC 7810 ID-1, 85.6 × 53.98 mm.
+ */
+export type ImagePageSize = 'fit' | 'a4' | 'letter' | 'receipt' | 'business-card' | 'id-card';
 
 export interface ImageInput {
   bytes: Uint8Array;

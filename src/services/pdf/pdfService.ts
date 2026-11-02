@@ -24,6 +24,19 @@ import type {
 
 const A4: [number, number] = [595.28, 841.89];
 const LETTER: [number, number] = [612, 792];
+const MM = 72 / 25.4;
+const RECEIPT_WIDTH = 80 * MM;
+const CARD_SIZES: Record<'business-card' | 'id-card', [number, number]> = {
+  'business-card': [55 * MM, 85 * MM],
+  'id-card': [53.98 * MM, 85.6 * MM],
+};
+
+/** Portrait [width, height] of fixed-size presets. */
+function fixedPageSize(pageSize: 'a4' | 'letter' | 'business-card' | 'id-card'): [number, number] {
+  if (pageSize === 'a4') return A4;
+  if (pageSize === 'letter') return LETTER;
+  return CARD_SIZES[pageSize];
+}
 const PRODUCER = 'ScanPilot';
 
 function throwIfCancelled(token?: CancelToken): void {
@@ -118,20 +131,20 @@ export async function imagesToPdf(images: readonly ImageInput[], options: Images
     if (type === null) throw new UserFacingError(`Image ${i + 1} is not a JPEG or PNG.`);
     const image = type === 'image/png' ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
 
-    if (pageSize === 'fit') {
-      // Keep the image's aspect ratio and scale it to roughly A4 physical size.
-      const longEdge = Math.max(image.width, image.height);
-      const scale = A4[1] / longEdge;
+    if (pageSize === 'fit' || pageSize === 'receipt') {
+      // Keep the image's aspect ratio: fit scales the long edge to A4 length, receipt fixes the width at 80 mm.
+      const scale = pageSize === 'receipt' ? RECEIPT_WIDTH / image.width : A4[1] / Math.max(image.width, image.height);
       const width = image.width * scale;
       const height = image.height * scale;
       const page = doc.addPage([width, height]);
       page.drawImage(image, { x: 0, y: 0, width, height });
     } else {
-      const base = pageSize === 'a4' ? A4 : LETTER;
+      const base = fixedPageSize(pageSize);
       const landscape = image.width > image.height;
       const [pw, ph] = landscape ? [base[1], base[0]] : base;
       const page = doc.addPage([pw, ph]);
-      const fit = image.scaleToFit(pw - margin * 2, ph - margin * 2);
+      const inset = Math.min(margin, pw / 4, ph / 4);
+      const fit = image.scaleToFit(pw - inset * 2, ph - inset * 2);
       page.drawImage(image, { x: (pw - fit.width) / 2, y: (ph - fit.height) / 2, width: fit.width, height: fit.height });
     }
     onProgress?.(i + 1, images.length);
