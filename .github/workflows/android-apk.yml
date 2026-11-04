@@ -9,7 +9,7 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [claude/scanpilot-document-scanner-qb0w6g]
+    branches: ['claude/**', main, master]
     paths-ignore: ['**.md', 'docs/**']
 
 concurrency:
