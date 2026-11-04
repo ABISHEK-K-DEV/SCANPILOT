@@ -36,11 +36,26 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Install Android SDK components
+      - name: Prepare Android SDK
+        # compileSdk 37 / build-tools 37 / NDK 27.1 come from the Expo SDK 58 Gradle plugin.
+        # Package names for new platforms can differ (e.g. "android-37" vs "android-37.0"),
+        # so resolve them from the live repository listing; anything still missing is
+        # downloaded by the Android Gradle plugin once licences are accepted.
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "platforms;android-37" "build-tools;37.0.0" "ndk;27.1.12297006" "platform-tools" > /dev/null
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$SDKM" --licenses > /dev/null
+          "$SDKM" "cmdline-tools;latest" > /dev/null || true
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$SDKM" --licenses > /dev/null
+          "$SDKM" --list 2>/dev/null > /tmp/sdk-list.txt || true
+          echo "Available platforms / build-tools (36+):"
+          grep -oE '^ *(platforms;android-3[6-9][^ ]*|build-tools;3[6-9][^ ]*)' /tmp/sdk-list.txt | sort -u || true
+          PLATFORM=$(grep -oE 'platforms;android-37(\.[0-9]+)?' /tmp/sdk-list.txt | head -1 || true)
+          BUILD_TOOLS=$(grep -oE 'build-tools;37\.0\.0' /tmp/sdk-list.txt | head -1 || true)
+          for pkg in $PLATFORM $BUILD_TOOLS "ndk;27.1.12297006"; do
+            echo "Installing $pkg"
+            "$SDKM" "$pkg" > /dev/null || echo "::warning::Could not pre-install $pkg; Gradle will try to download it."
+          done
 
       - name: Install dependencies
         run: npm ci
