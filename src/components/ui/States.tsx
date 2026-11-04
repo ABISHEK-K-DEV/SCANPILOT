@@ -40,7 +40,7 @@ export function EmptyState({ icon, title, message, actionLabel, onAction, compac
 }
 
 export function LoadingState({ label = 'Loading…' }: { label?: string }) {
-  const { colors, spacing } = useAppTheme();
+  const { spacing } = useAppTheme();
   return (
     <View style={[styles.center, styles.fill, { gap: spacing.md }]} accessibilityRole="progressbar" accessibilityLabel={label}>
       <ProgressRing progress={null} size={40} stroke={4} />
