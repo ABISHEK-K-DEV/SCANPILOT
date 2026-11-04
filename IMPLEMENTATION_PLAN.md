@@ -109,6 +109,15 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (permissions / conditions / limitations) and full text; third-party acknowledgements are collapsed beneath it (their notices must still be shipped).
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+## ScanPilot camera & redesigned review ✅
+The capture screens are now ScanPilot's own — Google's scanner UI (its add-page icon, Enhance/Filters/Crop bar) no longer appears by default.
+- **Camera** (`src/app/scan/camera.tsx`, expo-camera behind `src/native/camera`): frame guide, flash off/auto/on, grid, gallery import, batch capture with a live page stack and count, *Done* → review. Permission screen with *Open settings* and *Choose photos instead*. Modes: new, append, replace (Retake) and return (tools await pages through `services/scan/cameraBridge.ts`).
+- **Edge detection on the phone** (`services/scan/detect.ts`, pure + Jest tests): Otsu threshold → largest bright region → extreme-point corners, with confidence/coverage checks; `autoCropPage` perspective-corrects with the existing warp, then *Auto enhance* is applied. The untouched photo stays as the page original.
+- **Review**: page strip with a dashed *Add page* tile, then three tabs — **Edit** (rotate, crop, retake, delete), **Filter** (live thumbnail previews of every filter + *Apply to all*), **Page size** (presets); bottom bar *Scan more* + *Save PDF*.
+- **Settings → Scanning → Scanner**: ScanPilot camera (default) or the system scanner (Google ML Kit / Apple VisionKit).
+- Adds the `CAMERA` permission (camera only — microphone and barcode scanning are disabled in the `expo-camera` plugin).
+- Repository works on a single **`main`** branch; the APK workflow builds on every push to `main` (and on demand).
+
 ## Camera & import everywhere, document toolbar ✅
 Found on a real device: most tools could only pick from the library, the introduction collapsed when reopened from Settings, and Google's scanner showed its own filter UI.
 - **`useDocumentSources`** (camera scan → PDF, import PDF, photos → PDF) without leaving the screen. Used by the document picker (`DocumentSelectModal`: Scan / Import PDF / Photos tiles; new documents are selected straight away) and by **`ChooseDocumentCard`**, the empty state of every tool (Sign, Edit, Redact, Split, Compress, Organise, OCR, PDF to JPG, Merge, Watermark, Page numbers, Protect, Unlock, Repair, Rotate, Crop).

@@ -28,6 +28,7 @@ export const LICENSES: readonly LicenseEntry[] = [
   { name: 'react-native-pdf-thumbnail', license: 'MIT', url: 'https://github.com/songsterq/react-native-pdf-thumbnail', usage: 'Document thumbnails' },
   { name: 'react-native-document-scanner-plugin', license: 'MIT', url: 'https://github.com/websitebeaver/react-native-document-scanner-plugin', usage: 'iOS document scanner bridge' },
   { name: 'Google ML Kit Document Scanner', license: 'Google APIs Terms of Service (free)', url: 'https://developers.google.com/ml-kit/vision/doc-scanner', usage: 'Android scanning UI via Google Play services' },
+  { name: 'expo-camera / Android CameraX', license: 'MIT / Apache-2.0', url: 'https://github.com/expo/expo/tree/main/packages/expo-camera', usage: 'ScanPilot camera' },
   { name: 'Apple VisionKit', license: 'Apple SDK (system framework)', url: 'https://developer.apple.com/documentation/visionkit', usage: 'iOS scanning UI' },
   { name: 'jpeg-js', license: 'BSD-3-Clause', url: 'https://github.com/jpeg-js/jpeg-js', usage: 'Decoding pages for perspective correction' },
   { name: 'Zustand', license: 'MIT', url: 'https://github.com/pmndrs/zustand', usage: 'App state' },

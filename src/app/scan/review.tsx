@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { FilterStrip } from '@/components/scan/FilterStrip';
 import { PageThumb } from '@/components/scan/PageThumb';
 import { ToolbarButton } from '@/components/scan/ToolbarButton';
 import {
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui';
 import { useScanFlow } from '@/hooks/useScanFlow';
 import { availableName } from '@/services/library/documentService';
-import { FILTERS, type FilterId } from '@/services/scan/filters';
+import type { FilterId } from '@/services/scan/filters';
 import { filterImage, rotateImage } from '@/services/scan/pageProcessing';
 import { savePagesAsPdf } from '@/services/scan/scanService';
 import { PRESETS } from '@/services/scan/types';
@@ -27,13 +28,21 @@ import { useScanSession } from '@/stores/scanSessionStore';
 import { useAppTheme } from '@/theme';
 import { errorMessage, isCancelled } from '@/utils/errors';
 
-type Sheet = 'add' | 'rename' | 'filters' | null;
+type Sheet = 'add' | 'rename' | null;
+type Panel = 'edit' | 'filters' | 'size';
+
+const PANELS: { id: Panel; label: string; icon: 'crop-outline' | 'color-wand-outline' | 'document-text-outline' }[] = [
+  { id: 'edit', label: 'Edit', icon: 'crop-outline' },
+  { id: 'filters', label: 'Filter', icon: 'color-wand-outline' },
+  { id: 'size', label: 'Page size', icon: 'document-text-outline' },
+];
 
 export default function ScanReviewScreen() {
   const { colors, radius, spacing } = useAppTheme();
   const { pages, selectedId, preset, name, folderId, select, remove, move, update, setPreset, setName, clear } = useScanSession();
   const flow = useScanFlow();
   const [sheet, setSheet] = useState<Sheet>(null);
+  const [panel, setPanel] = useState<Panel>('edit');
   const [busy, setBusy] = useState<string | null>(null);
   const [saving, setSaving] = useState<{ completed: number; total: number } | null>(null);
   const cancelToken = useRef({ cancelled: false });
@@ -197,16 +206,7 @@ export default function ScanReviewScreen() {
         </View>
       </View>
 
-      <View style={[styles.toolbar, { paddingHorizontal: spacing.sm, marginTop: spacing.sm }]}>
-        <ToolbarButton icon="arrow-undo-outline" label="Left" onPress={() => void rotate(-90)} />
-        <ToolbarButton icon="arrow-redo-outline" label="Right" onPress={() => void rotate(90)} />
-        <ToolbarButton icon="crop-outline" label="Crop" onPress={() => page && router.push({ pathname: '/scan/crop', params: { id: page.id } })} />
-        <ToolbarButton icon="color-filter-outline" label="Filter" onPress={() => setSheet('filters')} />
-        <ToolbarButton icon="camera-reverse-outline" label="Retake" onPress={() => page && void flow.capture({ replace: page.id })} />
-        <ToolbarButton icon="trash-outline" label="Delete" destructive onPress={confirmDelete} />
-      </View>
-
-      <View style={[styles.stripHeader, { paddingHorizontal: spacing.lg }]}>
+      <View style={[styles.stripHeader, { paddingHorizontal: spacing.lg, marginTop: spacing.sm }]}>
         <AppText variant="label" tone="subtle" style={styles.flex}>
           {pages.length} {pages.length === 1 ? 'PAGE' : 'PAGES'}
         </AppText>
@@ -228,31 +228,64 @@ export default function ScanReviewScreen() {
           accessibilityLabel="Add pages"
           style={({ pressed }) => [
             styles.addTile,
-            { borderColor: colors.borderStrong, borderRadius: radius.sm + 2, backgroundColor: pressed ? colors.surfacePressed : colors.surface },
+            { borderColor: colors.primary, borderRadius: radius.sm + 2, backgroundColor: pressed ? colors.surfacePressed : colors.primarySoft },
           ]}
         >
-          <View style={[styles.addIcon, { backgroundColor: colors.primarySoft }]}>
-            <Icon name="add" size={18} color={colors.primary} strokeWidth={2.2} />
-          </View>
-          <AppText variant="label" tone="muted">
-            Add
+          <Icon name="file-plus" size={22} color={colors.primary} />
+          <AppText variant="label" tone="primary" align="center" style={styles.addLabel}>
+            Add page
           </AppText>
         </Pressable>
       </ScrollView>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.noGrow}
-        contentContainerStyle={[styles.chips, { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}
-      >
-        {PRESETS.map((p) => (
-          <Chip key={p.id} label={p.label} selected={preset === p.id} onPress={() => setPreset(p.id)} accessibilityLabel={`${p.label}, ${p.hint}`} />
-        ))}
-      </ScrollView>
+      <View style={[styles.segment, { marginHorizontal: spacing.lg, marginTop: spacing.md, backgroundColor: colors.surfaceAlt, borderRadius: radius.md }]} accessibilityRole="tablist">
+        {PANELS.map((tab) => {
+          const active = panel === tab.id;
+          return (
+            <Pressable
+              key={tab.id}
+              onPress={() => setPanel(tab.id)}
+              accessibilityRole="tab"
+              accessibilityLabel={tab.label}
+              accessibilityState={{ selected: active }}
+              style={[styles.segmentItem, { borderRadius: radius.md - 3, backgroundColor: active ? colors.surface : 'transparent' }, active && styles.segmentShadow]}
+            >
+              <Icon name={tab.icon} size={16} color={active ? colors.primary : colors.textMuted} />
+              <AppText variant="caption" color={active ? colors.text : colors.textMuted} style={styles.segmentLabel}>
+                {tab.label}
+              </AppText>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View style={styles.panel}>
+        {panel === 'edit' ? (
+          <View style={[styles.toolbar, { paddingHorizontal: spacing.sm }]}>
+            <ToolbarButton icon="arrow-undo-outline" label="Left" onPress={() => void rotate(-90)} />
+            <ToolbarButton icon="arrow-redo-outline" label="Right" onPress={() => void rotate(90)} />
+            <ToolbarButton icon="crop-outline" label="Crop" onPress={() => page && router.push({ pathname: '/scan/crop', params: { id: page.id } })} />
+            <ToolbarButton icon="camera-reverse-outline" label="Retake" onPress={() => page && void flow.capture({ replace: page.id })} />
+            <ToolbarButton icon="trash-outline" label="Delete" destructive onPress={confirmDelete} />
+          </View>
+        ) : panel === 'filters' && page ? (
+          <FilterStrip page={page} busy={busy !== null} onSelect={(f) => void setFilter(f)} onApplyToAll={() => void applyToAll(page.filter ?? 'original')} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.noGrow}
+            contentContainerStyle={[styles.chips, { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.md }]}
+          >
+            {PRESETS.map((p) => (
+              <Chip key={p.id} label={p.label} selected={preset === p.id} onPress={() => setPreset(p.id)} accessibilityLabel={`${p.label}, ${p.hint}`} />
+            ))}
+          </ScrollView>
+        )}
+      </View>
 
       <View style={[styles.saveBar, { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md, gap: spacing.sm, borderTopColor: colors.border, backgroundColor: colors.surface }]}>
-        <Button label="Add" icon="add" variant="secondary" onPress={() => setSheet('add')} accessibilityHint="Scan more pages or add photos" />
+        <Button label="Scan more" icon="camera" variant="secondary" onPress={() => void flow.capture('append')} accessibilityHint="Opens the camera to add pages" />
         <Button
           label={`Save PDF · ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`}
           icon="checkmark"
@@ -266,29 +299,8 @@ export default function ScanReviewScreen() {
         title="Add pages"
         onClose={() => setSheet(null)}
         actions={[
-          { key: 'scan', label: 'Scan more pages', icon: 'scan-outline', onPress: () => flow.capture('append') },
-          { key: 'photos', label: 'Add from photos', icon: 'images-outline', onPress: () => flow.addFromPhotos('append') },
-        ]}
-      />
-      <ActionSheet
-        visible={sheet === 'filters'}
-        title="Filter"
-        subtitle={`Page ${index + 1} · current: ${FILTERS.find((f) => f.id === (page?.filter ?? 'original'))?.label}`}
-        onClose={() => setSheet(null)}
-        actions={[
-          ...FILTERS.map((f) => ({
-            key: f.id,
-            label: f.label,
-            icon: (f.id === 'original' ? 'image-outline' : f.id === 'bw' ? 'contrast-outline' : f.id === 'clarity' ? 'document-text-outline' : 'color-filter-outline') as 'image-outline',
-            selected: (page?.filter ?? 'original') === f.id,
-            onPress: () => setFilter(f.id),
-          })),
-          {
-            key: 'all',
-            label: `Apply “${FILTERS.find((f) => f.id === (page?.filter ?? 'original'))?.label}” to all pages`,
-            icon: 'copy-outline',
-            onPress: () => applyToAll(page?.filter ?? 'original'),
-          },
+          { key: 'scan', label: 'Scan with camera', hint: 'Added after the last page', icon: 'camera', onPress: () => flow.capture('append') },
+          { key: 'photos', label: 'Add from photos', hint: 'Pick images from your gallery', icon: 'image-plus', onPress: () => flow.addFromPhotos('append') },
         ]}
       />
       <TextPromptModal
@@ -329,5 +341,11 @@ const styles = StyleSheet.create({
   chips: { alignItems: 'center' },
   toolbar: { flexDirection: 'row' },
   stripHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  addTile: { width: 64, height: 86, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  addTile: { width: 64, height: 86, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  addLabel: { fontSize: 10.5, lineHeight: 13 },
+  segment: { flexDirection: 'row', padding: 3 },
+  segmentItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 38 },
+  segmentShadow: { shadowColor: '#0F172A', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
+  segmentLabel: { fontWeight: '600' },
+  panel: { minHeight: 112, justifyContent: 'center' },
 });

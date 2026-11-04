@@ -9,6 +9,8 @@ import ScanReviewScreen from '@/app/scan/review';
 import { capturePages, savePagesAsPdf } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
 import { useScanSession } from '@/stores/scanSessionStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { DEFAULT_SETTINGS } from '@/types/settings';
 
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
@@ -65,6 +67,20 @@ beforeEach(() => {
 });
 
 describe('scan entry points', () => {
+  it('Home "Scan document" opens ScanPilot\'s camera by default', async () => {
+    useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, onboardingComplete: true } });
+    await render(<HomeScreen />, { wrapper });
+    await fireEvent.press(screen.getAllByLabelText('Scan document')[0]);
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/scan/camera', params: { mode: 'new' } });
+    expect(capturePages).not.toHaveBeenCalled();
+  });
+});
+
+describe('scan entry points (system scanner)', () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, onboardingComplete: true, scanner: 'system' } });
+  });
+
   it('Home "Scan document" opens the native scanner and the review screen on success', async () => {
     (capturePages as jest.Mock).mockResolvedValueOnce([page('p1'), page('p2')]);
     await render(<HomeScreen />, { wrapper });
@@ -114,6 +130,7 @@ describe('scan review screen', () => {
 
   it('saves with the chosen preset and opens the new document', async () => {
     await render(<ScanReviewScreen />, { wrapper });
+    await fireEvent.press(screen.getByLabelText('Page size'));
     await fireEvent.press(screen.getByLabelText('Receipt, 80 mm wide'));
     await fireEvent.press(screen.getByLabelText('Save PDF · 3 pages'));
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/document/[id]', params: { id: 'doc-1' } }));

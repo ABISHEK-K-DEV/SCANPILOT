@@ -28,6 +28,7 @@ Gradle/CocoaPods are listed manually below.
 | react-native-pdf-thumbnail 2.x | MIT | First-page thumbnails (Android PdfRenderer / iOS PDFKit) | Yes |
 | react-native-document-scanner-plugin 2.0.4 | MIT | iOS VisionKit bridge (Android uses ScanPilot's own module) | Yes (iOS) |
 | Google ML Kit Document Scanner (`play-services-mlkit-document-scanner` 16.0.0) | Google APIs Terms (free, closed source) | Android scanning UI, runs inside Google Play services | Yes (Android) |
+| expo-camera (Android: AndroidX CameraX) | MIT (CameraX: Apache-2.0) | ScanPilot's own document camera | Yes |
 | Apple VisionKit | Apple SDK | iOS scanning UI | System framework |
 | jpeg-js 0.4.4 | BSD-3-Clause | JPEG decoding for manual perspective correction | Yes |
 | Zustand | MIT | App state | Yes |

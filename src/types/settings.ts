@@ -2,6 +2,9 @@ import type { SortOption, ViewMode } from './document';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+/** `camera`: ScanPilot's own camera screen. `system`: Google ML Kit / Apple VisionKit scanner. */
+export type ScannerPreference = 'camera' | 'system';
+
 export interface AppSettings {
   theme: ThemePreference;
   onboardingComplete: boolean;
@@ -9,6 +12,7 @@ export interface AppSettings {
   sort: SortOption;
   /** Require fingerprint/face/PIN when opening the app. */
   appLock: boolean;
+  scanner: ScannerPreference;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -17,4 +21,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   viewMode: 'grid',
   sort: { field: 'date', direction: 'desc' },
   appLock: false,
+  scanner: 'camera',
 };

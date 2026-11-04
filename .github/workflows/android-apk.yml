@@ -9,7 +9,7 @@ name: Android APK
 on:
   workflow_dispatch:
   push:
-    branches: ['claude/**', main, master]
+    branches: [main]
     paths-ignore: ['**.md', 'docs/**']
 
 concurrency:

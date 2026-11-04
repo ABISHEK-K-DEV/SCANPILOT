@@ -37,6 +37,7 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Import PDFs (multi-select, header validation) and convert photos to a PDF (ordered multi-select, resized & re-encoded on device).
 * Native PDF viewer with page indicator, password-protected PDF support, page-count backfill.
 * Document actions: share, save to device (Android folder picker), rename, favourite, move, duplicate, delete.
+* ScanPilot's own document camera: frame guide, flash, grid, batch pages, on-device edge detection and auto-crop, then a review screen with live filter previews (the system scanner remains available in Settings).
 * Camera scan, PDF import and photos → PDF available inside every tool's document picker, in empty Files/folders (plus a floating Scan button) and as **Add pages** in the document viewer.
 * Professional light/dark/system design system (Inter type, Lucide icons), animated start-up screen, swipeable onboarding, progress dialogs, privacy page, MIT licence page with third-party acknowledgements, storage usage & temp-file cleanup.
 * Tested PDF engine (pdf-lib): images→PDF, merge, split, extract, rotate, reorder, delete, duplicate — UI arrives in Milestone 4.

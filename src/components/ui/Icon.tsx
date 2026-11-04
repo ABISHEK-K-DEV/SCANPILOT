@@ -96,6 +96,12 @@ import Wrench from 'lucide-react-native/icons/wrench';
 import X from 'lucide-react-native/icons/x';
 import ExternalLink from 'lucide-react-native/icons/external-link';
 import Code from 'lucide-react-native/icons/code';
+import CameraOff from 'lucide-react-native/icons/camera-off';
+import FilePlus from 'lucide-react-native/icons/file-plus';
+import Grid3x3 from 'lucide-react-native/icons/grid-3x3';
+import ImagePlus from 'lucide-react-native/icons/image-plus';
+import Zap from 'lucide-react-native/icons/zap';
+import ZapOff from 'lucide-react-native/icons/zap-off';
 
 import { useAppTheme } from '@/theme';
 
@@ -174,6 +180,13 @@ const ICONS = {
   'scan-outline': { c: Scan },
   'scan-text': { c: ScanText },
   'camera-reverse-outline': { c: Camera },
+  camera: { c: Camera },
+  'camera-off': { c: CameraOff },
+  'file-plus': { c: FilePlus },
+  'image-plus': { c: ImagePlus },
+  'grid-3x3': { c: Grid3x3 },
+  flash: { c: Zap },
+  'flash-off': { c: ZapOff },
   'arrow-undo-outline': { c: RotateCcw },
   'arrow-redo-outline': { c: RotateCw },
   undo: { c: Undo },

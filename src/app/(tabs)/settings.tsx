@@ -24,6 +24,7 @@ export default function SettingsScreen() {
   const update = useSettingsStore((s) => s.update);
   const stats = useLibraryStats();
   const [themeSheet, setThemeSheet] = useState(false);
+  const [scannerSheet, setScannerSheet] = useState(false);
   const [usage, setUsage] = useState<StorageUsage | null>(null);
 
   useFocusEffect(
@@ -107,6 +108,16 @@ export default function SettingsScreen() {
           />
         </ListGroup>
 
+        <ListGroup title="Scanning">
+          <ListRow
+            icon="scan"
+            title="Scanner"
+            subtitle={settings.scanner === 'camera' ? 'ScanPilot camera · auto edge detection on this phone' : 'System scanner (Google Play services / Apple VisionKit)'}
+            value={settings.scanner === 'camera' ? 'ScanPilot' : 'System'}
+            onPress={() => setScannerSheet(true)}
+          />
+        </ListGroup>
+
         <ListGroup title="Privacy & security">
           <ListRow icon="shield-checkmark-outline" title="How ScanPilot protects your files" onPress={() => router.push('/privacy')} />
           <ListRow
@@ -150,6 +161,30 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      <ActionSheet
+        visible={scannerSheet}
+        title="Scanner"
+        subtitle="Both run entirely on this phone"
+        onClose={() => setScannerSheet(false)}
+        actions={[
+          {
+            key: 'camera',
+            label: 'ScanPilot camera',
+            hint: 'Frame guide, flash, batch pages, automatic edge detection',
+            icon: 'camera',
+            selected: settings.scanner === 'camera',
+            onPress: () => void update('scanner', 'camera'),
+          },
+          {
+            key: 'system',
+            label: 'System scanner',
+            hint: "Google's scanner from Play services (Apple VisionKit on iPhone)",
+            icon: 'scan-outline',
+            selected: settings.scanner === 'system',
+            onPress: () => void update('scanner', 'system'),
+          },
+        ]}
+      />
       <ActionSheet
         visible={themeSheet}
         title="Theme"

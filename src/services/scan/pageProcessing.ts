@@ -13,7 +13,8 @@ import { createId } from '@/utils/id';
 
 import { encodeBmp24 } from './bmp';
 import { type Adjustments, adjust, applyFilter, type FilterId, toRgb } from './filters';
-import { boundingRect, isAxisAlignedRect, isConvexQuad, outputSizeForQuad, type Quad } from './geometry';
+import { detectDocumentQuad, rgbaToGray } from './detect';
+import { boundingRect, isAxisAlignedRect, isConvexQuad, outputSizeForQuad, type Quad, scaleQuad } from './geometry';
 import type { ScanPage } from './types';
 import { warpPerspective } from './warp';
 
@@ -161,4 +162,50 @@ export async function filterImage(sourceUri: string, filter: FilterId, adjustmen
   } finally {
     deleteFileQuietly(bmp.uri);
   }
+}
+
+/** Long edge of the preview used for edge detection. */
+const DETECT_EDGE = 320;
+
+/**
+ * Finds the page in a camera photo and perspective-corrects it. Returns the
+ * page unchanged when no page is found with confidence (the user can still
+ * drag the corners in the crop editor). `originalUri` keeps the full photo.
+ */
+export async function autoCropPage(page: ScanPage): Promise<ScanPage> {
+  try {
+    const small = await render(page.uri, (ctx) => {
+      ctx.resize(page.width >= page.height ? { width: DETECT_EDGE } : { height: DETECT_EDGE });
+    });
+    let detection: ReturnType<typeof detectDocumentQuad> = null;
+    try {
+      const decoded = decodeJpeg(await new File(small.uri).bytes(), { useTArray: true, formatAsRGBA: true });
+      detection = detectDocumentQuad(rgbaToGray(decoded.data, decoded.width, decoded.height), decoded.width, decoded.height);
+    } finally {
+      deleteFileQuietly(small.uri);
+    }
+    if (!detection) return page;
+    const quad = scaleQuad(detection.quad, page.width / small.width, page.height / small.height);
+    const cropped = await cropImage(page, quad);
+    return { ...page, uri: cropped.uri, width: cropped.width, height: cropped.height };
+  } catch {
+    return page;
+  }
+}
+
+/** Small previews of every filter for the review screen's filter strip. */
+export async function filterPreviews(sourceUri: string, filters: readonly FilterId[]): Promise<Partial<Record<FilterId, string>>> {
+  const small = await render(sourceUri, (ctx) => {
+    ctx.resize({ width: 180 });
+  });
+  const out: Partial<Record<FilterId, string>> = { original: small.uri };
+  for (const filter of filters) {
+    if (filter === 'original') continue;
+    try {
+      out[filter] = (await filterImage(small.uri, filter)).uri;
+    } catch {
+      // Leave this preview out; the chip still works.
+    }
+  }
+  return out;
 }

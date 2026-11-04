@@ -77,7 +77,10 @@ const shots = [
   ['20-licences', '/licenses'],
   ['21-scan-review', '/scan/review'],
   ['22-scan-review-photo', '/scan/review?page=p3'],
-  ['23-scan-presets', '/scan/review', async (p) => p.getByRole('button', { name: /^Receipt,/ }).click()],
+  ['23-scan-presets', '/scan/review', async (p) => {
+    await p.getByLabel('Page size', { exact: true }).click();
+    await p.getByRole('button', { name: /^Receipt,/ }).click();
+  }],
   ['24-scan-add-pages', '/scan/review', async (p) => p.getByLabel('Add pages').last().click()],
   ['27-merge', '/tool/merge?ids=doc-lease,doc-bill,doc-invoice'],
   ['28-merge-select', '/tool/merge?ids=doc-lease', async (p) => p.getByLabel('Add', { exact: true }).click()],
@@ -174,6 +177,14 @@ const shots = [
   ['52-intro-small-phone', '/?onboarding=1', async (p) => p.setViewportSize({ width: 360, height: 640 })],
   ['53-files-empty-folder', '/folder/f-empty'],
   ['54-tool-picker-sources', '/tool/sign', async (p) => p.getByLabel('Choose from library').click()],
+  ['55-camera', '/scan/camera'],
+  ['56-camera-batch', '/scan/camera', async (p) => {
+    await p.getByLabel('Show grid').click();
+    await p.getByLabel('Take photo').click();
+    await p.waitForTimeout(500);
+    await p.getByLabel('Take photo').click();
+    await p.waitForTimeout(700);
+  }],
   ['25-crop-editor', '/scan/crop?id=p3', dragCornersOntoPaper],
   ['26-crop-editor-dark', '/scan/crop?id=p3&theme=dark', dragCornersOntoPaper],
 ];

@@ -8,6 +8,7 @@ import { filterImage } from '@/services/scan/pageProcessing';
 import { capturePages, type IngestCallbacks, pickPages } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
 import { useScanSession } from '@/stores/scanSessionStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { errorMessage } from '@/utils/errors';
 
 interface Progress {
@@ -93,6 +94,12 @@ export function useScanFlow() {
   }
 
   async function capture(mode: AddMode = 'append', navigate = false): Promise<void> {
+    // ScanPilot's own camera screen (default). It adds pages to the session itself.
+    if (useSettingsStore.getState().settings.scanner === 'camera') {
+      const params = typeof mode === 'object' ? { mode: 'replace', replace: mode.replace } : { mode: navigate ? 'new' : 'append' };
+      router.push({ pathname: '/scan/camera', params });
+      return;
+    }
     try {
       const pages = await capturePages({ maxPages: typeof mode === 'object' ? 1 : undefined, ...callbacks('Preparing pages') });
       if (!pages) {

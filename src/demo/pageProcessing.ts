@@ -18,3 +18,9 @@ export async function cropImage(page: ScanPage) {
 export async function filterImage(uri: string) {
   return { uri, width: 1240, height: 1754 };
 }
+export async function autoCropPage(page: ScanPage): Promise<ScanPage> {
+  return page;
+}
+export async function filterPreviews(uri: string, filters: readonly string[]): Promise<Record<string, string>> {
+  return Object.fromEntries(filters.map((f) => [f, uri]));
+}

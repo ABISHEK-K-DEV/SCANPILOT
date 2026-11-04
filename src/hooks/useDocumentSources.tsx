@@ -6,7 +6,10 @@ import { ScannerError } from '@/native/scanner';
 import { importImagesAsPdf, importPdfs } from '@/services/import/importService';
 import { availableName } from '@/services/library/documentService';
 import { filterImage } from '@/services/scan/pageProcessing';
+import { waitForCameraPages } from '@/services/scan/cameraBridge';
 import { capturePages, savePagesAsPdf } from '@/services/scan/scanService';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { router } from 'expo-router';
 import type { ScanPage } from '@/services/scan/types';
 import type { ScanDocument } from '@/types/document';
 import { errorMessage, isCancelled } from '@/utils/errors';
@@ -73,11 +76,20 @@ export function useDocumentSources(folderId: string | null = null) {
 
   async function fromScan(): Promise<ScanDocument[] | null> {
     try {
-      const pages = await capturePages(callbacks('Preparing pages'));
+      const useCamera = useSettingsStore.getState().settings.scanner === 'camera';
+      let pages: ScanPage[] | null;
+      if (useCamera) {
+        // The camera screen crops and enhances each page itself.
+        const result = waitForCameraPages();
+        router.push({ pathname: '/scan/camera', params: { mode: 'return' } });
+        pages = await result;
+      } else {
+        pages = await capturePages(callbacks('Preparing pages'));
+      }
       if (!pages || pages.length === 0) return null;
       // This path skips the review screen, so apply ScanPilot's auto-enhance here.
-      const enhanced: ScanPage[] = [];
-      for (let i = 0; i < pages.length; i += 1) {
+      const enhanced: ScanPage[] = useCamera ? [...pages] : [];
+      for (let i = 0; !useCamera && i < pages.length; i += 1) {
         setBusy({ title: 'Enhancing pages', completed: i, total: pages.length });
         try {
           enhanced.push({ ...pages[i], ...(await filterImage(pages[i].uri, 'auto')) });
