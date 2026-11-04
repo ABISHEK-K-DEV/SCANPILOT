@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { useAppTheme } from '@/theme';
 
@@ -32,7 +32,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Search documen
         returnKeyType="search"
         clearButtonMode="never"
         accessibilityLabel={placeholder}
-        style={[typography.body, styles.input, { color: colors.text }]}
+        style={[typography.body, styles.input, { color: colors.text }, Platform.OS === 'web' ? WEB_NO_OUTLINE : null]}
       />
       {value.length > 0 ? (
         <Pressable onPress={() => onChangeText('')} accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10}>
@@ -42,6 +42,9 @@ export function SearchField({ value, onChangeText, placeholder = 'Search documen
     </View>
   );
 }
+
+/** Browsers draw a focus ring inside the field; the field's own border is the focus affordance. */
+const WEB_NO_OUTLINE = { outlineStyle: 'none' } as object;
 
 const styles = StyleSheet.create({
   container: { flexDirection: 'row', alignItems: 'center', minHeight: 50, borderWidth: 1 },

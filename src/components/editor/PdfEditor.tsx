@@ -9,7 +9,8 @@ import Svg, { Path } from 'react-native-svg';
 
 import { ToolbarButton } from '@/components/scan/ToolbarButton';
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
-import { AppText, Button, Card, EmptyState, IconButton, type IconName, LoadingState, ProgressOverlay, Screen, TextPromptModal } from '@/components/ui';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
+import { AppText, Button, EmptyState, IconButton, type IconName, LoadingState, ProgressOverlay, Screen, TextPromptModal } from '@/components/ui';
 import { usePdfPages } from '@/hooks/usePdfPages';
 import { useSelectedDocument } from '@/hooks/useSelectedDocument';
 import { type EditorItem, type EditorTool, newItemId, trimStrokes } from '@/services/editor/model';
@@ -216,22 +217,19 @@ export function PdfEditor({ mode }: { mode: EditorMode }) {
     return (
       <Screen edges={['left', 'right', 'bottom']} contentStyle={{ paddingTop: spacing.lg }}>
         {header}
-        <Card>
-          <EmptyState
-            compact
-            icon={mode === 'sign' ? 'pencil' : mode === 'redact' ? 'eye-off-outline' : 'create-outline'}
-            title={config.title}
-            message={
-              mode === 'sign'
-                ? 'Draw your signature once, then place it on any page. Add text and dates too.'
-                : mode === 'redact'
-                  ? 'Black out sensitive information. Redacted pages are flattened, so the hidden content is truly removed.'
-                  : 'Add text, highlights, drawings, shapes, images and whiteout. A new copy is saved.'
-            }
-            actionLabel="Choose PDF"
-            onAction={() => setPicker(true)}
-          />
-        </Card>
+        <ChooseDocumentCard
+          icon={mode === 'sign' ? 'pencil' : mode === 'redact' ? 'eye-off-outline' : 'create-outline'}
+          title={config.title}
+          message={
+            mode === 'sign'
+              ? 'Draw your signature once, then place it on any page. Add text and dates too.'
+              : mode === 'redact'
+                ? 'Black out sensitive information. Redacted pages are flattened, so the hidden content is truly removed.'
+                : 'Add text, highlights, drawings, shapes, images and whiteout. A new copy is saved.'
+          }
+          onChoose={() => setPicker(true)}
+          onCreated={(d) => choose(d)}
+        />
         <DocumentSelectModal visible={picker} title="Choose a PDF" onClose={() => setPicker(false)} onSelect={([d]) => (setPicker(false), choose(d))} />
       </Screen>
     );

@@ -38,7 +38,7 @@ export interface OcrResult {
 
 interface ScanPilotNativeModule {
   recognizeText(uri: string, script: 'latin' | 'devanagari'): Promise<OcrResult>;
-  scanDocument(options: { pageLimit?: number; galleryImport?: boolean }): Promise<NativeScanResult>;
+  scanDocument(options: { pageLimit?: number; galleryImport?: boolean; mode?: 'base' | 'full' }): Promise<NativeScanResult>;
   getPdfInfo(uri: string): Promise<NativePdfInfo>;
   renderPdfPage(uri: string, pageIndex: number, dpi: number, quality: number, maxEdge: number, outputUri: string): Promise<RenderedPage>;
 }

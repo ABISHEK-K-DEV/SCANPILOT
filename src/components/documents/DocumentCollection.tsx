@@ -42,7 +42,7 @@ export function DocumentCollection({ documents, viewMode, onMore, header, empty,
       keyExtractor={(doc) => doc.id}
       numColumns={columns}
       columnWrapperStyle={columns > 1 ? { gap } : undefined}
-      contentContainerStyle={[styles.content, { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl, gap }]}
+      contentContainerStyle={[styles.content, { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl * 2, gap }]}
       ListHeaderComponent={header}
       ListEmptyComponent={empty}
       renderItem={({ item }) =>

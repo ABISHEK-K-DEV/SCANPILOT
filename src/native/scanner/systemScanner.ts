@@ -73,7 +73,7 @@ export const systemScanner: DocumentScanner = {
     try {
       if (Platform.OS === 'android') {
         if (!ScanPilotNative) throw new ScannerError('The document scanner is not available in this build.', 'unavailable');
-        const result = await ScanPilotNative.scanDocument({ pageLimit: options.maxPages ?? 0, galleryImport: true });
+        const result = await ScanPilotNative.scanDocument({ pageLimit: options.maxPages ?? 0, galleryImport: true, mode: 'base' });
         if (result.status !== 'success' || result.pages.length === 0) return { status: 'cancelled' };
         return { status: 'success', pages: result.pages.map((uri) => ({ uri })) };
       }

@@ -9,6 +9,7 @@ import MergeScreen from '@/app/tool/merge';
 import OrganizeScreen from '@/app/tool/organize';
 import SplitScreen from '@/app/tool/split';
 import { isCompressionSupported } from '@/services/tools/compressService';
+import { importPdfs } from '@/services/import/importService';
 import { mergeDocuments } from '@/services/tools/mergeService';
 import { saveOrganised } from '@/services/tools/organizeService';
 import { splitDocument } from '@/services/tools/splitService';
@@ -125,7 +126,37 @@ describe('Split', () => {
 
   it('asks for a document when opened from the Tools tab', async () => {
     await render(<SplitScreen />, { wrapper });
-    expect(screen.getByLabelText('Choose PDF')).toBeTruthy();
+    expect(screen.getByLabelText('Choose from library')).toBeTruthy();
+    // The camera and import are offered right inside the tool.
+    expect(screen.getByLabelText('Scan with camera')).toBeTruthy();
+    expect(screen.getByLabelText('Import PDF')).toBeTruthy();
+    expect(screen.getByLabelText('Photos to PDF')).toBeTruthy();
+  });
+});
+
+describe('Adding documents from inside a tool', () => {
+  it('imports a PDF from the tool card and selects it', async () => {
+    delete mockParams.id;
+    const delta = mockDoc('d', 'Delta imported', 2);
+    mockLibrary.push(delta);
+    (importPdfs as jest.Mock).mockResolvedValueOnce({ imported: [delta], failed: [] });
+    await render(<SplitScreen />, { wrapper });
+    await fireEvent.press(screen.getByLabelText('Import PDF'));
+    expect(await screen.findByText('Delta imported')).toBeTruthy();
+    mockLibrary.pop();
+  });
+
+  it('imports a PDF from the library picker and selects it', async () => {
+    delete mockParams.id;
+    const echo = mockDoc('e', 'Echo imported', 4);
+    mockLibrary.push(echo);
+    (importPdfs as jest.Mock).mockResolvedValueOnce({ imported: [echo], failed: [] });
+    await render(<SplitScreen />, { wrapper });
+    await fireEvent.press(screen.getByLabelText('Choose from library'));
+    const buttons = await screen.findAllByLabelText('Import PDF');
+    await fireEvent.press(buttons[buttons.length - 1]);
+    await waitFor(() => expect(screen.getAllByText('Echo imported').length).toBeGreaterThan(0));
+    mockLibrary.pop();
   });
 });
 

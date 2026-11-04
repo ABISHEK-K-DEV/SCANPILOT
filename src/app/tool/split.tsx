@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, TextInput, View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { OptionCard } from '@/components/tools/OptionCard';
 import { ResultList } from '@/components/tools/ResultList';
 import { SelectedDocumentCard } from '@/components/tools/SelectedDocumentCard';
-import { AppText, Button, Card, EmptyState, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
+import { AppText, Button, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
 import { useSelectedDocument } from '@/hooks/useSelectedDocument';
 import { describePages } from '@/services/pdf/pageRanges';
 import { loadPageCount } from '@/services/tools/organizeService';
@@ -78,9 +79,7 @@ export default function SplitScreen() {
       {loading ? (
         <LoadingState />
       ) : !doc ? (
-        <Card>
-          <EmptyState compact icon="cut-outline" title="Split a PDF" message="Pick the document to split. New PDFs are created; the original is kept." actionLabel="Choose PDF" onAction={() => setPicker(true)} />
-        </Card>
+        <ChooseDocumentCard icon="cut-outline" title="Split a PDF" message="Pick the document to split. New PDFs are created; the original is kept." onChoose={() => setPicker(true)} onCreated={(d) => (choose(d))} />
       ) : (
         <>
           <SelectedDocumentCard doc={doc} onChange={() => setPicker(true)} />

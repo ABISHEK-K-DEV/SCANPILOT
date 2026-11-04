@@ -29,6 +29,8 @@ import kotlin.math.roundToInt
 class ScanOptions : Record {
   @Field val pageLimit: Int = 0
   @Field val galleryImport: Boolean = true
+  /** "base": camera + crop/rotate only (ScanPilot applies filters in its own review screen); "full": Google's enhance/filter UI too. */
+  @Field val mode: String = "base"
 }
 
 class PdfException(code: String, message: String, cause: Throwable? = null) : CodedException(code, message, cause)
@@ -59,7 +61,9 @@ class ScanPilotNativeModule : Module() {
       }
       val builder = GmsDocumentScannerOptions.Builder()
         .setResultFormats(GmsDocumentScannerOptions.RESULT_FORMAT_JPEG)
-        .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+        .setScannerMode(
+          if (options.mode == "full") GmsDocumentScannerOptions.SCANNER_MODE_FULL else GmsDocumentScannerOptions.SCANNER_MODE_BASE,
+        )
         .setGalleryImportAllowed(options.galleryImport)
       if (options.pageLimit > 0) builder.setPageLimit(options.pageLimit)
 

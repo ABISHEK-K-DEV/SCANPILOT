@@ -109,6 +109,14 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (permissions / conditions / limitations) and full text; third-party acknowledgements are collapsed beneath it (their notices must still be shipped).
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+## Camera & import everywhere, document toolbar ✅
+Found on a real device: most tools could only pick from the library, the introduction collapsed when reopened from Settings, and Google's scanner showed its own filter UI.
+- **`useDocumentSources`** (camera scan → PDF, import PDF, photos → PDF) without leaving the screen. Used by the document picker (`DocumentSelectModal`: Scan / Import PDF / Photos tiles; new documents are selected straight away) and by **`ChooseDocumentCard`**, the empty state of every tool (Sign, Edit, Redact, Split, Compress, Organise, OCR, PDF to JPG, Merge, Watermark, Page numbers, Protect, Unlock, Repair, Rotate, Crop).
+- **Files & folders**: floating **Scan** button; empty library/folder shows Scan / Import PDF / Photos.
+- **Document viewer**: bottom toolbar — **Add pages** (scan or photos appended as a new copy; or Merge with another PDF), Sign, Edit, Compress, More.
+- **Scanner**: ML Kit now runs in `SCANNER_MODE_BASE` (camera + crop only). Enhancement and filters happen in ScanPilot's own review screen; camera pages start with *Auto enhance* (Filter → Original restores the capture). Google's camera screen itself is drawn by Play services and cannot be restyled.
+- **Introduction**: the pager is measured and each slide gets an explicit size (a horizontal ScrollView gives pages no height on Android), and the illustration scales down on short screens.
+
 ## Milestone 3 — Filters & enhancement ✅
 Scan review → Filter: Original, Auto enhance, Document (shadow & colour-cast removal), Grayscale, Black & white (adaptive threshold), High contrast, Photo; apply to one or all pages; switching filters never stacks (each page keeps its pre-filter image).
 

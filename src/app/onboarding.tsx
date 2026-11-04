@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { type ReactNode, useRef, useState } from 'react';
-import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, type ScrollViewInstance, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
 
 import { Wordmark } from '@/components/brand/Logo';
 import { AppText, Button, Icon, type IconName, Screen } from '@/components/ui';
@@ -115,12 +115,17 @@ const SLIDES: { key: string; art: () => ReactNode; eyebrow: string; title: strin
 
 export default function OnboardingScreen() {
   const { colors, spacing } = useAppTheme();
-  const { width } = useWindowDimensions();
   const update = useSettingsStore((s) => s.update);
   const [index, setIndex] = useState(0);
+  // The pager is measured, not flex-sized: a horizontal ScrollView does not give
+  // its pages a height on Android, which collapsed the slides into each other.
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
   const pager = useRef<ScrollViewInstance>(null);
   const last = index === SLIDES.length - 1;
-  const pageWidth = Math.min(width, 820);
+  const pageWidth = size?.width ?? 0;
+
+  // Shrink the illustration on short screens so the copy never overlaps it.
+  const artScale = size ? Math.max(0.55, Math.min(1, (size.height - 230) / STAGE)) : 1;
 
   const finish = async () => {
     await update('onboardingComplete', true);
@@ -133,8 +138,18 @@ export default function OnboardingScreen() {
   };
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!pageWidth) return;
     const i = Math.round(e.nativeEvent.contentOffset.x / pageWidth);
     if (i !== index && i >= 0 && i < SLIDES.length) setIndex(i);
+  };
+
+  const onLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (!size || Math.abs(size.width - width) > 1 || Math.abs(size.height - height) > 1) {
+      setSize({ width, height });
+      // Keep the current slide in view after a rotation / resize.
+      requestAnimationFrame(() => pager.current?.scrollTo({ x: index * width, animated: false }));
+    }
   };
 
   return (
@@ -144,39 +159,47 @@ export default function OnboardingScreen() {
         {!last ? <Button label="Skip" variant="ghost" compact onPress={finish} /> : <View style={styles.skipSpace} />}
       </View>
 
-      <ScrollView
-        ref={pager}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={onScrollEnd}
-        scrollEventThrottle={16}
-        style={styles.flex}
-      >
-        {SLIDES.map((slide, i) => (
-          <View
-            key={slide.key}
-            style={[styles.page, { width: pageWidth, paddingHorizontal: spacing.xl }]}
-            accessibilityElementsHidden={i !== index}
-            importantForAccessibility={i === index ? 'auto' : 'no-hide-descendants'}
+      <View style={styles.flex} onLayout={onLayout}>
+        {size ? (
+          <ScrollView
+            ref={pager}
+            horizontal
+            pagingEnabled
+            bounces={false}
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onScrollEnd}
+            scrollEventThrottle={16}
+            style={{ width: size.width, height: size.height }}
+            contentContainerStyle={{ height: size.height }}
           >
-            {slide.art()}
-            <View style={[styles.copy, { gap: spacing.sm }]}>
-              <AppText variant="label" tone="primary" align="center" style={styles.eyebrow}>
-                {slide.eyebrow}
-              </AppText>
-              <AppText variant="display" align="center" accessibilityLiveRegion="polite">
-                {slide.title}
-              </AppText>
-              <AppText tone="muted" align="center" style={styles.body}>
-                {slide.body}
-              </AppText>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
+            {SLIDES.map((slide, i) => (
+              <View
+                key={slide.key}
+                style={[styles.page, { width: size.width, height: size.height, paddingHorizontal: spacing.xl, gap: 28 * artScale + 8 }]}
+                accessibilityElementsHidden={i !== index}
+                importantForAccessibility={i === index ? 'auto' : 'no-hide-descendants'}
+              >
+                <View style={{ width: STAGE * artScale, height: STAGE * artScale, alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ transform: [{ scale: artScale }] }}>{slide.art()}</View>
+                </View>
+                <View style={[styles.copy, { gap: spacing.sm }]}>
+                  <AppText variant="label" tone="primary" align="center" style={styles.eyebrow}>
+                    {slide.eyebrow}
+                  </AppText>
+                  <AppText variant="display" align="center" accessibilityLiveRegion="polite">
+                    {slide.title}
+                  </AppText>
+                  <AppText tone="muted" align="center" style={styles.body}>
+                    {slide.body}
+                  </AppText>
+                </View>
+              </View>
+            ))}
+          </ScrollView>
+        ) : null}
+      </View>
 
-      <View style={{ gap: spacing.xl, paddingBottom: spacing.lg, paddingHorizontal: spacing.lg }}>
+      <View style={{ gap: spacing.xl, paddingTop: spacing.md, paddingBottom: spacing.lg, paddingHorizontal: spacing.lg }}>
         <View style={[styles.dots, { gap: 6 }]} accessible accessibilityLabel={`Step ${index + 1} of ${SLIDES.length}`}>
           {SLIDES.map((s, i) => (
             <View key={s.key} style={[styles.dot, { width: i === index ? 24 : 6, backgroundColor: i === index ? colors.primary : colors.borderStrong }]} />
@@ -203,7 +226,7 @@ const styles = StyleSheet.create({
   noPad: { paddingHorizontal: 0 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', minHeight: 56 },
   skipSpace: { height: 40 },
-  page: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 36 },
+  page: { alignItems: 'center', justifyContent: 'center' },
   copy: { alignItems: 'center', maxWidth: 420 },
   eyebrow: { letterSpacing: 1.6 },
   body: { maxWidth: 360 },

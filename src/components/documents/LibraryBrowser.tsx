@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import { useDeferredValue, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+
+import { SourceButtons } from '@/components/tools/DocumentSources';
 
 import {
   ActionSheet,
@@ -8,6 +10,7 @@ import {
   Chip,
   EmptyState,
   ErrorState,
+  Icon,
   IconButton,
   LoadingState,
   SearchField,
@@ -19,7 +22,7 @@ import { useDocuments, useFolders } from '@/hooks/useLibraryQueries';
 import { useScanFlow } from '@/hooks/useScanFlow';
 import { createFolder } from '@/services/library/folderService';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { useAppTheme } from '@/theme';
+import { elevation, useAppTheme } from '@/theme';
 import type { SortOption } from '@/types/document';
 
 import { DocumentCollection } from './DocumentCollection';
@@ -37,7 +40,7 @@ interface LibraryBrowserProps {
 type Sheet = 'sort' | 'add' | 'new-folder' | null;
 
 export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusSearch }: LibraryBrowserProps) {
-  const { spacing } = useAppTheme();
+  const { spacing, colors, radius } = useAppTheme();
   const viewMode = useSettingsStore((s) => s.settings.viewMode);
   const sort = useSettingsStore((s) => s.settings.sort);
   const updateSetting = useSettingsStore((s) => s.update);
@@ -111,13 +114,19 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
     empty = <EmptyState icon="star-outline" title="No favourites yet" message="Use a document's ⋮ menu to add it to your favourites." />;
   else
     empty = (
-      <EmptyState
-        icon="documents-outline"
-        title={folderId ? 'This folder is empty' : 'No documents yet'}
-        message={folderId ? 'Scan or import files here, or move documents into this folder.' : 'Scan a document, import a PDF or turn photos into a PDF to get started.'}
-        actionLabel="Scan document"
-        onAction={() => scanner.startScan(folderId ?? null)}
-      />
+      <View style={{ gap: spacing.lg, paddingTop: spacing.md }}>
+        <EmptyState
+          compact
+          icon="documents-outline"
+          title={folderId ? 'This folder is empty' : 'No documents yet'}
+          message={folderId ? 'Scan or import files straight into this folder, or move documents here.' : 'Scan with the camera, import a PDF or turn photos into a PDF to get started.'}
+        />
+        <SourceButtons
+          onPick={(source) =>
+            source === 'scan' ? scanner.startScan(folderId ?? null) : source === 'import' ? void importer.importPdf() : void importer.importImages()
+          }
+        />
+      </View>
     );
 
   return (
@@ -131,6 +140,23 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
         refreshing={false}
         onRefresh={documents.refresh}
       />
+      <Pressable
+        onPress={() => scanner.startScan(folderId ?? null)}
+        accessibilityRole="button"
+        accessibilityLabel="Scan document"
+        accessibilityHint="Opens the camera scanner"
+        style={({ pressed }) => [
+          styles.fab,
+          { backgroundColor: pressed ? colors.primaryPressed : colors.primary, borderRadius: radius.lg + 2, right: spacing.lg, bottom: spacing.lg },
+          elevation.raised,
+          { shadowColor: colors.primary, shadowOpacity: 0.35 },
+        ]}
+      >
+        <Icon name="scan" size={20} color={colors.onPrimary} />
+        <AppText variant="bodyStrong" color={colors.onPrimary}>
+          Scan
+        </AppText>
+      </Pressable>
       <ActionSheet
         visible={sheet === 'sort'}
         title="Sort by"
@@ -148,9 +174,9 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
         title="Add to library"
         onClose={() => setSheet(null)}
         actions={[
-          { key: 'scan', label: 'Scan document', icon: 'scan-outline', onPress: () => scanner.startScan(folderId ?? null) },
-          { key: 'pdf', label: 'Import PDF', icon: 'document-attach-outline', onPress: importer.importPdf },
-          { key: 'images', label: 'Images to PDF', icon: 'images-outline', onPress: importer.importImages },
+          { key: 'scan', label: 'Scan with camera', hint: 'Automatic edge detection', icon: 'scan', onPress: () => scanner.startScan(folderId ?? null) },
+          { key: 'pdf', label: 'Import PDF', hint: 'From Files, Drive or Downloads', icon: 'document-attach', onPress: importer.importPdf },
+          { key: 'images', label: 'Photos to PDF', hint: 'Pick images from your gallery', icon: 'file-image', onPress: importer.importImages },
           ...(folderId === undefined
             ? [{ key: 'folder', label: 'New folder', icon: 'folder-open-outline' as const, onPress: () => setSheet('new-folder') }]
             : []),
@@ -178,4 +204,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center' },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  fab: { position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, height: 54 },
 });

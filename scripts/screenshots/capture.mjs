@@ -166,6 +166,14 @@ const shots = [
     await p.waitForTimeout(400);
     await p.getByRole('menuitem', { name: 'PDF tools…' }).click();
   }],
+  ['50-intro-from-settings', '/settings', async (p) => {
+    await p.getByLabel('Show introduction again').click();
+    await p.waitForTimeout(700);
+  }],
+  ['51-intro-step-2', '/?onboarding=1', async (p) => p.getByLabel('Continue').click()],
+  ['52-intro-small-phone', '/?onboarding=1', async (p) => p.setViewportSize({ width: 360, height: 640 })],
+  ['53-files-empty-folder', '/folder/f-empty'],
+  ['54-tool-picker-sources', '/tool/sign', async (p) => p.getByLabel('Choose from library').click()],
   ['25-crop-editor', '/scan/crop?id=p3', dragCornersOntoPaper],
   ['26-crop-editor-dark', '/scan/crop?id=p3&theme=dark', dragCornersOntoPaper],
 ];

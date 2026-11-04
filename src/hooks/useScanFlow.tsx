@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 
 import { ProgressOverlay } from '@/components/ui';
 import { ScannerError } from '@/native/scanner';
+import { filterImage } from '@/services/scan/pageProcessing';
 import { capturePages, type IngestCallbacks, pickPages } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
 import { useScanSession } from '@/stores/scanSessionStore';
@@ -42,6 +43,8 @@ export function useScanFlow() {
         originalUri: first.originalUri,
         originalWidth: first.originalWidth,
         originalHeight: first.originalHeight,
+        base: first.base,
+        filter: first.filter,
       });
       session.select(mode.replace);
     } else {
@@ -69,12 +72,35 @@ export function useScanFlow() {
     }
   }
 
+  /**
+   * The system scanner runs in its basic mode (camera + crop), so camera pages
+   * start with ScanPilot's "Auto enhance". The untouched capture is kept as the
+   * page's base, so Filter → Original restores it.
+   */
+  async function autoEnhance(pages: ScanPage[]): Promise<ScanPage[]> {
+    const out: ScanPage[] = [];
+    for (let i = 0; i < pages.length; i += 1) {
+      const page = pages[i];
+      setProgress({ title: 'Enhancing pages', completed: i, total: pages.length });
+      try {
+        const result = await filterImage(page.uri, 'auto');
+        out.push({ ...page, ...result, base: { uri: page.uri, width: page.width, height: page.height }, filter: 'auto' });
+      } catch {
+        out.push(page);
+      }
+    }
+    return out;
+  }
+
   async function capture(mode: AddMode = 'append', navigate = false): Promise<void> {
     try {
       const pages = await capturePages({ maxPages: typeof mode === 'object' ? 1 : undefined, ...callbacks('Preparing pages') });
+      if (!pages) {
+        setProgress(null);
+        return;
+      }
+      apply(await autoEnhance(pages), mode);
       setProgress(null);
-      if (!pages) return;
-      apply(pages, mode);
       if (navigate) router.push('/scan/review');
     } catch (error) {
       setProgress(null);

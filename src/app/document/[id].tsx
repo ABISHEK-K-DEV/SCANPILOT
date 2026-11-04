@@ -1,16 +1,94 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PdfViewer } from '@/components/pdf/PdfViewer';
-import { AppText, Button, EmptyState, ErrorState, IconButton, LoadingState, TextPromptModal } from '@/components/ui';
+import { ActionSheet, AppText, Button, EmptyState, ErrorState, Icon, IconButton, type IconName, LoadingState, ProgressOverlay, TextPromptModal } from '@/components/ui';
 import { getDocument } from '@/db/documentsRepository';
 import { useAsyncQuery } from '@/hooks/useAsyncQuery';
 import { useDocumentActions } from '@/hooks/useDocumentActions';
-import { markOpened, recordPageCount } from '@/services/library/documentService';
+import { type DocumentSource, useDocumentSources } from '@/hooks/useDocumentSources';
+import { useToolLauncher } from '@/hooks/useToolLauncher';
+import { tool, type ToolId } from '@/features/tools';
+import { mergeDocuments } from '@/services/tools/mergeService';
+import type { ScanDocument } from '@/types/document';
+import { availableName, deleteDocument, markOpened, recordPageCount } from '@/services/library/documentService';
 import { shareDocument } from '@/services/share/shareService';
 import { useAppTheme } from '@/theme';
 import { errorMessage } from '@/utils/errors';
+
+function BarButton({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
+  const { colors, radius } = useAppTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.barButton, { borderRadius: radius.md, opacity: pressed ? 0.6 : 1 }]}
+    >
+      <Icon name={icon} size={21} color={colors.text} />
+      <AppText variant="caption" tone="muted" numberOfLines={1} style={styles.barLabel}>
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+/** Bottom toolbar: add pages (camera / photos / another PDF) and the most used tools. */
+function DocumentBar({ doc, onMore }: { doc: ScanDocument; onMore: () => void }) {
+  const { colors, spacing } = useAppTheme();
+  const insets = useSafeAreaInsets();
+  const tools = useToolLauncher();
+  const sources = useDocumentSources(doc?.folderId ?? null);
+  const [addSheet, setAddSheet] = useState(false);
+  const [appending, setAppending] = useState(false);
+
+  /** Scan or pick photos, then save "<name> + pages" as a new copy; the original is kept. */
+  const addPages = async (source: DocumentSource) => {
+    const created = await sources.add(source);
+    if (!created?.length) return;
+    setAppending(true);
+    try {
+      const merged = await mergeDocuments([doc, ...created], { name: await availableName(doc.name), folderId: doc.folderId });
+      // The scanned/imported pages were only a stepping stone (imported PDFs stay).
+      if (source !== 'import') await Promise.all(created.map((c: ScanDocument) => deleteDocument(c.id).catch(() => undefined)));
+      router.replace({ pathname: '/document/[id]', params: { id: merged.id } });
+    } catch (error) {
+      Alert.alert('Could not add pages', errorMessage(error));
+    } finally {
+      setAppending(false);
+    }
+  };
+
+  const quickTools = (['sign', 'edit', 'compress'] as ToolId[]).filter((t) => tool(t).available);
+
+  return (
+    <>
+      <View style={[styles.bar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingHorizontal: spacing.sm, paddingBottom: insets.bottom + 8 }]}>
+        <BarButton icon="add-circle-outline" label="Add pages" onPress={() => setAddSheet(true)} />
+        {quickTools.map((t) => (
+          <BarButton key={t} icon={tool(t).icon} label={t === 'sign' ? 'Sign' : t === 'edit' ? 'Edit' : 'Compress'} onPress={() => tools.launch(t, doc.id)} />
+        ))}
+        <BarButton icon="grid-outline" label="More" onPress={onMore} />
+      </View>
+      <ActionSheet
+        visible={addSheet}
+        title="Add pages"
+        subtitle={`Saved as a new copy of "${doc.name}"`}
+        onClose={() => setAddSheet(false)}
+        actions={[
+          { key: 'scan', label: 'Scan with camera', hint: 'Pages are added at the end', icon: 'scan', onPress: () => addPages('scan') },
+          { key: 'photos', label: 'From photos', hint: 'Pick images from your gallery', icon: 'file-image', onPress: () => addPages('photos') },
+          { key: 'pdf', label: 'Another PDF', hint: 'Choose and reorder in Merge', icon: 'git-merge', onPress: () => tools.launch('merge', doc.id) },
+        ]}
+      />
+      <ProgressOverlay visible={appending} title="Adding pages" progress={null} />
+      {sources.overlay}
+      {tools.overlays}
+    </>
+  );
+}
 
 export default function DocumentScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -97,6 +175,7 @@ export default function DocumentScreen() {
           </AppText>
         </View>
       ) : null}
+      {!locked && !viewerError ? <DocumentBar doc={doc} onMore={() => actions.show(doc)} /> : null}
       {locked ? (
         <View style={{ padding: spacing.lg }}>
           <Button label="Back" variant="ghost" onPress={() => router.back()} />
@@ -123,5 +202,8 @@ export default function DocumentScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   headerActions: { flexDirection: 'row', alignItems: 'center' },
-  pagePill: { position: 'absolute', bottom: 24, alignSelf: 'center', paddingVertical: 6 },
+  pagePill: { position: 'absolute', bottom: 96, alignSelf: 'center', paddingVertical: 6 },
+  bar: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 6 },
+  barButton: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 56, gap: 3 },
+  barLabel: { fontSize: 11.5, fontWeight: '500' },
 });

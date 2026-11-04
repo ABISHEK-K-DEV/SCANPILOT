@@ -5,8 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ToolbarButton } from '@/components/scan/ToolbarButton';
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { PageTile } from '@/components/tools/PageTile';
-import { ActionSheet, AppText, Button, Card, EmptyState, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
+import { ActionSheet, AppText, Button, EmptyState, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
 import { useSelectedDocument } from '@/hooks/useSelectedDocument';
 import {
   deleteSelected,
@@ -140,9 +141,7 @@ export default function OrganizeScreen() {
     return (
       <Screen edges={['left', 'right', 'bottom']} contentStyle={{ paddingTop: spacing.lg }}>
         {header}
-        <Card>
-          <EmptyState compact icon="albums-outline" title="Organise pages" message="Reorder, rotate, duplicate, delete or extract pages of a PDF." actionLabel="Choose PDF" onAction={() => setPicker(true)} />
-        </Card>
+        <ChooseDocumentCard icon="albums-outline" title="Organise pages" message="Reorder, rotate, duplicate, delete or extract pages of a PDF." onChoose={() => setPicker(true)} onCreated={(d) => (choose(d))} />
         <DocumentSelectModal visible={picker} title="Choose a PDF" onClose={() => setPicker(false)} onSelect={([d]) => (setPicker(false), choose(d))} />
       </Screen>
     );

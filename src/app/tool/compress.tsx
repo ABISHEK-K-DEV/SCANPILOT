@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { OptionCard } from '@/components/tools/OptionCard';
 import { ResultList } from '@/components/tools/ResultList';
 import { SelectedDocumentCard } from '@/components/tools/SelectedDocumentCard';
@@ -80,9 +81,7 @@ export default function CompressScreen() {
       {loading ? (
         <LoadingState />
       ) : !doc ? (
-        <Card>
-          <EmptyState compact icon="contract-outline" title="Make a PDF smaller" message="Best for scans and photos. A compressed copy is created; the original is kept." actionLabel="Choose PDF" onAction={() => setPicker(true)} />
-        </Card>
+        <ChooseDocumentCard icon="contract-outline" title="Make a PDF smaller" message="Best for scans and photos. A compressed copy is created; the original is kept." onChoose={() => setPicker(true)} onCreated={(d) => (choose(d))} />
       ) : (
         <>
           <SelectedDocumentCard doc={doc} onChange={() => setPicker(true)} />

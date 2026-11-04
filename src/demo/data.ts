@@ -32,6 +32,7 @@ export const demoFolders: Folder[] = [
   { id: 'f-contracts', name: 'Contracts', createdAt: now - 40 * DAY, updatedAt: now - 2 * DAY },
   { id: 'f-receipts', name: 'Receipts', createdAt: now - 30 * DAY, updatedAt: now - DAY },
   { id: 'f-ids', name: 'IDs & certificates', createdAt: now - 20 * DAY, updatedAt: now - 5 * DAY },
+  { id: 'f-empty', name: 'Travel', createdAt: now - 3 * DAY, updatedAt: now - 3 * DAY },
 ];
 
 export const demoDocuments: ScanDocument[] = [

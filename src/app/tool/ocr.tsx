@@ -5,6 +5,7 @@ import { Alert, TextInput, View } from 'react-native';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { ChoiceRow, Field } from '@/components/tools/FormBits';
 import { OptionCard } from '@/components/tools/OptionCard';
 import { SelectedDocumentCard } from '@/components/tools/SelectedDocumentCard';
@@ -114,6 +115,7 @@ export default function OcrScreen() {
         <Button
           label="Make a searchable PDF"
           icon="search-outline"
+          variant="tonal"
           onPress={() =>
             makeSearchablePdf(doc, run)
               .then((created) => router.push({ pathname: '/document/[id]', params: { id: created.id } }))
@@ -137,7 +139,13 @@ export default function OcrScreen() {
         ) : doc ? (
           <SelectedDocumentCard doc={doc} onChange={() => setPicker(true)} />
         ) : (
-          <Button label="Choose PDF" icon="document-outline" variant="secondary" onPress={() => setPicker(true)} />
+          <ChooseDocumentCard
+            icon="scan-text"
+            title="Choose a PDF to read"
+            message="Text is recognised on your device. Nothing is uploaded."
+            onChoose={() => setPicker(true)}
+            onCreated={(d) => (setRun(null), choose(d))}
+          />
         )
       ) : null}
       <Field label="Language">

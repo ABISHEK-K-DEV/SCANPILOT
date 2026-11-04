@@ -5,10 +5,10 @@ import { Alert, StyleSheet, TextInput, View } from 'react-native';
 import { DocumentThumbnail } from '@/components/documents/DocumentThumbnail';
 import { documentMeta } from '@/components/documents/documentLabels';
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { ResultList } from '@/components/tools/ResultList';
-import { AppText, Button, Card, EmptyState, IconButton, ProgressOverlay, Screen } from '@/components/ui';
+import { AppText, Button, Card, IconButton, ProgressOverlay, Screen } from '@/components/ui';
 import { getDocument } from '@/db/documentsRepository';
-import { importPdfs } from '@/services/import/importService';
 import { availableName } from '@/services/library/documentService';
 import { mergeDocuments } from '@/services/tools/mergeService';
 import { useAppTheme } from '@/theme';
@@ -46,17 +46,6 @@ export default function MergeScreen() {
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
-
-  const importMore = async () => {
-    setPicker(false);
-    try {
-      const imported = await importPdfs();
-      if (imported?.imported.length) setDocs((prev) => [...prev, ...imported.imported]);
-      if (imported?.failed.length) Alert.alert('Some files were not imported', imported.failed.map((f) => `• ${f.name}: ${f.reason}`).join('\n'));
-    } catch (error) {
-      Alert.alert('Import failed', errorMessage(error));
-    }
-  };
 
   const merge = async () => {
     const problem = validateName(name);
@@ -98,16 +87,14 @@ export default function MergeScreen() {
           {docs.length > 0 ? <Button label="Add" icon="add" variant="ghost" compact onPress={() => setPicker(true)} /> : null}
         </View>
         {docs.length === 0 ? (
-          <Card>
-            <EmptyState
-              compact
-              icon="git-merge-outline"
-              title="Combine several PDFs into one"
-              message="Pick two or more documents. You can change their order before merging; the originals are kept."
-              actionLabel="Select PDFs"
-              onAction={() => setPicker(true)}
-            />
-          </Card>
+          <ChooseDocumentCard
+            icon="git-merge-outline"
+            title="Combine several PDFs into one"
+            message="Pick two or more documents. You can change their order before merging; the originals are kept."
+            chooseLabel="Select PDFs"
+            onChoose={() => setPicker(true)}
+            onCreated={(d) => (setResult(null), setDocs((prev) => [...prev, d]))}
+          />
         ) : (
           docs.map((doc, index) => (
             <Card key={doc.id} padded={false} style={[styles.row, { padding: spacing.sm, gap: spacing.sm }]}>
@@ -168,7 +155,6 @@ export default function MergeScreen() {
         multiple
         excludeIds={docs.map((d) => d.id)}
         onClose={() => setPicker(false)}
-        onImport={() => void importMore()}
         onSelect={(picked) => {
           setDocs((prev) => [...prev, ...picked]);
           setPicker(false);

@@ -3,9 +3,10 @@ import { type ReactNode, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { ResultList } from '@/components/tools/ResultList';
 import { SelectedDocumentCard } from '@/components/tools/SelectedDocumentCard';
-import { Button, Card, EmptyState, type IconName, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
+import { Button, type IconName, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
 import { useSelectedDocument } from '@/hooks/useSelectedDocument';
 import type { CancelToken, Progress } from '@/services/pdf/types';
 import { useAppTheme } from '@/theme';
@@ -57,9 +58,7 @@ export function SimpleDocTool({ title, icon, intro, actionLabel, resultTitle, ch
       {loading ? (
         <LoadingState />
       ) : !doc ? (
-        <Card>
-          <EmptyState compact icon={icon} title={title} message={intro} actionLabel="Choose PDF" onAction={() => setPicker(true)} />
-        </Card>
+        <ChooseDocumentCard icon={icon} title={title} message={intro} onChoose={() => setPicker(true)} onCreated={(d) => (setResults(null), choose(d))} />
       ) : (
         <>
           <SelectedDocumentCard doc={doc} onChange={() => setPicker(true)} />

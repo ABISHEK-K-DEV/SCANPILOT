@@ -4,9 +4,10 @@ import { useRef, useState } from 'react';
 import { Alert, ScrollView, View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
+import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { ChoiceRow, Field } from '@/components/tools/FormBits';
 import { SelectedDocumentCard } from '@/components/tools/SelectedDocumentCard';
-import { AppText, Button, Card, EmptyState, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
+import { AppText, Button, EmptyState, LoadingState, ProgressOverlay, Screen } from '@/components/ui';
 import { useSelectedDocument } from '@/hooks/useSelectedDocument';
 import { getPdfRenderer } from '@/native/pdfRenderer';
 import { buildZip } from '@/services/export/docx';
@@ -56,9 +57,7 @@ export default function PdfToImagesScreen() {
       {loading ? (
         <LoadingState />
       ) : !doc ? (
-        <Card>
-          <EmptyState compact icon="image-outline" title="PDF to JPG" message="Turn every page into a high-quality JPG image." actionLabel="Choose PDF" onAction={() => setPicker(true)} />
-        </Card>
+        <ChooseDocumentCard icon="image-outline" title="PDF to JPG" message="Turn every page into a high-quality JPG image." onChoose={() => setPicker(true)} onCreated={(d) => (setImages(null), choose(d))} />
       ) : (
         <>
           <SelectedDocumentCard doc={doc} onChange={() => setPicker(true)} />

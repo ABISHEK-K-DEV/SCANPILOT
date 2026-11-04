@@ -5,9 +5,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DocumentThumbnail } from '@/components/documents/DocumentThumbnail';
 import { documentMeta } from '@/components/documents/documentLabels';
 import { AppText, Button, EmptyState, ErrorState, Icon, IconButton, LoadingState, SearchField } from '@/components/ui';
+import { type DocumentSource, useDocumentSources } from '@/hooks/useDocumentSources';
 import { useDocuments } from '@/hooks/useLibraryQueries';
 import { useAppTheme } from '@/theme';
 import type { ScanDocument } from '@/types/document';
+
+import { SourceButtons } from './DocumentSources';
 
 interface DocumentSelectModalProps {
   visible: boolean;
@@ -17,7 +20,6 @@ interface DocumentSelectModalProps {
   excludeIds?: readonly string[];
   onClose: () => void;
   onSelect: (docs: ScanDocument[]) => void;
-  onImport?: () => void;
 }
 
 export function DocumentSelectModal(props: DocumentSelectModalProps) {
@@ -28,7 +30,7 @@ export function DocumentSelectModal(props: DocumentSelectModalProps) {
   );
 }
 
-function SelectBody({ title, multiple = false, excludeIds = [], onClose, onSelect, onImport }: DocumentSelectModalProps) {
+function SelectBody({ title, multiple = false, excludeIds = [], onClose, onSelect }: DocumentSelectModalProps) {
   const { colors, spacing, radius } = useAppTheme();
   const [search, setSearch] = useState('');
   const deferred = useDeferredValue(search);
@@ -36,6 +38,19 @@ function SelectBody({ title, multiple = false, excludeIds = [], onClose, onSelec
   const docs = useDocuments({ search: deferred, sort: { field: 'date', direction: 'desc' } });
   const available = (docs.data ?? []).filter((d) => !excludeIds.includes(d.id));
   const isPicked = (doc: ScanDocument) => picked.some((p) => p.id === doc.id);
+  const sources = useDocumentSources();
+
+  // New documents from the camera / import / photos are selected straight away.
+  const addNew = async (source: DocumentSource) => {
+    const created = await sources.add(source);
+    if (!created?.length) return;
+    if (!multiple) {
+      onSelect([created[0]]);
+      return;
+    }
+    setPicked((prev) => [...prev, ...created.filter((c) => !prev.some((p) => p.id === c.id))]);
+    docs.refresh();
+  };
 
   const toggle = (doc: ScanDocument) => {
     if (!multiple) {
@@ -53,9 +68,7 @@ function SelectBody({ title, multiple = false, excludeIds = [], onClose, onSelec
       <EmptyState
         icon="documents-outline"
         title={deferred ? 'No matches' : 'No PDFs available'}
-        message={deferred ? `No documents match "${deferred}".` : 'Import or scan a document first.'}
-        actionLabel={onImport ? 'Import PDF' : undefined}
-        onAction={onImport}
+        message={deferred ? `No documents match "${deferred}".` : 'Scan with the camera, import a PDF or turn photos into a PDF using the buttons above.'}
       />
     );
 
@@ -66,10 +79,13 @@ function SelectBody({ title, multiple = false, excludeIds = [], onClose, onSelec
         <AppText variant="heading" style={styles.flex} numberOfLines={1}>
           {title}
         </AppText>
-        {onImport ? <Button label="Import" icon="document-attach-outline" variant="ghost" compact onPress={onImport} /> : null}
       </View>
-      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
-        <SearchField value={search} onChangeText={setSearch} />
+      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md, gap: spacing.md }}>
+        <SourceButtons onPick={(s) => void addNew(s)} disabled={sources.busy} />
+        <SearchField value={search} onChangeText={setSearch} placeholder="Search your library" />
+        <AppText variant="label" tone="subtle">
+          YOUR LIBRARY
+        </AppText>
       </View>
       <FlatList
         data={available}
@@ -135,6 +151,7 @@ function SelectBody({ title, multiple = false, excludeIds = [], onClose, onSelec
           />
         </View>
       ) : null}
+      {sources.overlay}
     </SafeAreaView>
   );
 }
