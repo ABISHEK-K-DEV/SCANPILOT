@@ -1,0 +1,21 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'app.scanpilot'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.scanpilotnative"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+}
+
+dependencies {
+  implementation 'com.facebook.react:react-android'
+  // Google ML Kit Document Scanner (runs inside Google Play services; free, no camera permission needed).
+  implementation 'com.google.android.gms:play-services-mlkit-document-scanner:16.0.0'
+}

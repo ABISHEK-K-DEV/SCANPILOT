@@ -1,32 +1,30 @@
 import { Platform } from 'react-native';
 
+import { ScanPilotNative } from '../../../modules/scanpilot-native';
 import type { DocumentScanner, ScannerAvailability, ScanOptions, ScanResult } from './types';
 
 /**
- * System document scanner via react-native-document-scanner-plugin (MIT):
- *  - Android: Google ML Kit Document Scanner (full mode). Edge detection,
- *    auto-capture, perspective correction, crop adjustment and retakes are
- *    provided by Google Play services; the app needs no CAMERA permission.
- *  - iOS: VisionKit VNDocumentCameraViewController.
+ * System document scanner:
+ *  - Android: Google ML Kit Document Scanner through ScanPilot's own Expo module
+ *    (modules/scanpilot-native). Edge detection, auto-capture, perspective
+ *    correction, crop adjustment and retakes run inside Google Play services;
+ *    the app needs no CAMERA permission.
+ *  - iOS: VisionKit VNDocumentCameraViewController via react-native-document-scanner-plugin.
  */
-type PluginModule = typeof import('react-native-document-scanner-plugin').default;
+type IosPlugin = typeof import('react-native-document-scanner-plugin').default;
 
-let plugin: PluginModule | null | undefined;
+let iosPlugin: IosPlugin | null | undefined;
 
-function loadPlugin(): PluginModule | null {
-  if (plugin !== undefined) return plugin;
-  if (Platform.OS !== 'android' && Platform.OS !== 'ios') {
-    plugin = null;
-    return null;
-  }
+function loadIosPlugin(): IosPlugin | null {
+  if (iosPlugin !== undefined) return iosPlugin;
   try {
     // Lazy: the TurboModule throws on import when it isn't linked (Expo Go, tests).
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    plugin = (require('react-native-document-scanner-plugin') as { default: PluginModule }).default;
+    iosPlugin = (require('react-native-document-scanner-plugin') as { default: IosPlugin }).default;
   } catch {
-    plugin = null;
+    iosPlugin = null;
   }
-  return plugin;
+  return iosPlugin;
 }
 
 export class ScannerError extends Error {
@@ -36,32 +34,46 @@ export class ScannerError extends Error {
   }
 }
 
-function friendlyError(raw: string): ScannerError {
-  if (/play services|google play|module.*(not|un)available|gms/i.test(raw)) {
+/** Maps native failures to messages a non-technical user can act on. */
+export function friendlyScannerError(raw: string, code?: string): ScannerError {
+  if (code === 'ERR_SCANNER_UNAVAILABLE' || /play services|google play|unavailable|not available|gms|api.*disconnected/i.test(raw)) {
     return new ScannerError(
-      'The camera scanner needs Google Play services, which this device does not provide. You can still add pages from your photos.',
+      'The camera scanner needs an up-to-date Google Play services. Update it from the Play Store, or add pages from your photos instead.',
       'unavailable',
     );
   }
+  if (code === 'ERR_SCAN_IN_PROGRESS') return new ScannerError('A scan is already open.', 'failed');
   return new ScannerError(`The scanner could not start. ${raw}`.trim(), 'failed');
+}
+
+function errorParts(error: unknown): { message: string; code?: string } {
+  if (error && typeof error === 'object') {
+    const e = error as { message?: unknown; code?: unknown };
+    return { message: typeof e.message === 'string' ? e.message : String(error), code: typeof e.code === 'string' ? e.code : undefined };
+  }
+  return { message: String(error) };
 }
 
 export const systemScanner: DocumentScanner = {
   id: Platform.OS === 'ios' ? 'visionkit' : 'mlkit',
 
   async availability(): Promise<ScannerAvailability> {
-    if (Platform.OS !== 'android' && Platform.OS !== 'ios') return { available: false, reason: 'unsupported-platform' };
-    return loadPlugin() ? { available: true } : { available: false, reason: 'not-linked' };
+    if (Platform.OS === 'android') return ScanPilotNative ? { available: true } : { available: false, reason: 'not-linked' };
+    if (Platform.OS === 'ios') return loadIosPlugin() ? { available: true } : { available: false, reason: 'not-linked' };
+    return { available: false, reason: 'unsupported-platform' };
   },
 
   async scan(options: ScanOptions = {}): Promise<ScanResult> {
-    const native = loadPlugin();
-    if (!native) throw new ScannerError('The document scanner is not available in this build.', 'unavailable');
     try {
-      const response = await native.scanDocument({
-        croppedImageQuality: options.quality ?? 95,
-        ...(options.maxPages ? { maxNumDocuments: options.maxPages } : {}),
-      });
+      if (Platform.OS === 'android') {
+        if (!ScanPilotNative) throw new ScannerError('The document scanner is not available in this build.', 'unavailable');
+        const result = await ScanPilotNative.scanDocument({ pageLimit: options.maxPages ?? 0, galleryImport: true });
+        if (result.status !== 'success' || result.pages.length === 0) return { status: 'cancelled' };
+        return { status: 'success', pages: result.pages.map((uri) => ({ uri })) };
+      }
+      const plugin = Platform.OS === 'ios' ? loadIosPlugin() : null;
+      if (!plugin) throw new ScannerError('The document scanner is not available on this device.', 'unavailable');
+      const response = await plugin.scanDocument({ croppedImageQuality: options.quality ?? 95 });
       if (response.status === 'cancel' || !response.scannedImages || response.scannedImages.length === 0) {
         return { status: 'cancelled' };
       }
@@ -70,7 +82,9 @@ export const systemScanner: DocumentScanner = {
         pages: response.scannedImages.map((uri) => ({ uri: uri.startsWith('/') ? `file://${uri}` : uri })),
       };
     } catch (error) {
-      throw friendlyError(error instanceof Error ? error.message : String(error));
+      if (error instanceof ScannerError) throw error;
+      const { message, code } = errorParts(error);
+      throw friendlyScannerError(message, code);
     }
   },
 };

@@ -148,6 +148,21 @@ export async function duplicateDocument(id: string): Promise<ScanDocument> {
   });
 }
 
+/**
+ * Replaces a document's content with new bytes (e.g. after organising pages).
+ * The new file is written atomically, so a crash leaves either the old or the
+ * new version — never a half-written PDF. The thumbnail is regenerated.
+ */
+export async function replaceDocumentContent(id: string, bytes: Uint8Array, pageCount: number): Promise<ScanDocument> {
+  const doc = await requireDocument(id);
+  const file = documentFileFor(id);
+  await writeBytesAtomically(file, bytes);
+  const thumbnailUri = await generateThumbnail(id, file.uri, doc.thumbnailUri);
+  await updateDocument(id, { fileUri: file.uri, sizeBytes: fileSize(file.uri), pageCount, thumbnailUri: thumbnailUri ?? doc.thumbnailUri });
+  notifyLibraryChanged();
+  return requireDocument(id);
+}
+
 /** Permanently removes the PDF, its thumbnail, and its metadata. */
 export async function deleteDocument(id: string): Promise<void> {
   const doc = await getDocument(id);

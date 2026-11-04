@@ -22,6 +22,11 @@ export interface ImageInput {
   bytes: Uint8Array;
   /** Optional hint; detected from magic bytes when omitted. */
   mimeType?: 'image/jpeg' | 'image/png';
+  /**
+   * Exact page size in PDF points; the image fills the page. Overrides the
+   * `pageSize` preset (used when rebuilding compressed PDFs page-for-page).
+   */
+  pageSizePt?: { width: number; height: number };
 }
 
 export interface ImagesToPdfOptions extends OperationOptions {

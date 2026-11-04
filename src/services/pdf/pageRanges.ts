@@ -43,3 +43,21 @@ export function formatPageRanges(indices: readonly number[]): string {
   }
   return parts.join(', ');
 }
+
+/**
+ * Parses comma-separated ranges where each part becomes its own group, e.g.
+ * `1-3, 4-6, 7-` → [[0,1,2],[3,4,5],[6..]]. Used by "Split by ranges".
+ */
+export function parseRangeGroups(expression: string, pageCount: number): number[][] {
+  const parts = expression
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  if (parts.length === 0) throw new Error('Enter at least one page or range.');
+  return parts.map((part) => parsePageRanges(part, pageCount));
+}
+
+/** Human label for a group of zero-based pages: "page 4" or "pages 1-3, 7". */
+export function describePages(indices: readonly number[]): string {
+  return indices.length === 1 ? `page ${indices[0] + 1}` : `pages ${formatPageRanges(indices)}`;
+}

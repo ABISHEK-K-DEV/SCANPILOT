@@ -131,7 +131,11 @@ export async function imagesToPdf(images: readonly ImageInput[], options: Images
     if (type === null) throw new UserFacingError(`Image ${i + 1} is not a JPEG or PNG.`);
     const image = type === 'image/png' ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
 
-    if (pageSize === 'fit' || pageSize === 'receipt') {
+    const exact = images[i].pageSizePt;
+    if (exact) {
+      const page = doc.addPage([exact.width, exact.height]);
+      page.drawImage(image, { x: 0, y: 0, width: exact.width, height: exact.height });
+    } else if (pageSize === 'fit' || pageSize === 'receipt') {
       // Keep the image's aspect ratio: fit scales the long edge to A4 length, receipt fixes the width at 80 mm.
       const scale = pageSize === 'receipt' ? RECEIPT_WIDTH / image.width : A4[1] / Math.max(image.width, image.height);
       const width = image.width * scale;

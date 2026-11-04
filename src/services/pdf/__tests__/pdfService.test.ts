@@ -79,6 +79,12 @@ describe('imagesToPdf', () => {
     expect(business.getPage(0).getWidth()).toBeCloseTo(155.91, 1); // 55 mm portrait
   });
 
+  it('uses an exact page size per image when given (compression rebuild)', async () => {
+    const doc = await PDFDocument.load(await imagesToPdf([{ bytes: PNG_1X1, pageSizePt: { width: 612, height: 1008 } }], { pageSize: 'a4' }));
+    expect(doc.getPage(0).getWidth()).toBe(612);
+    expect(doc.getPage(0).getHeight()).toBe(1008);
+  });
+
   it('rejects empty input and unsupported images', async () => {
     await expect(imagesToPdf([])).rejects.toThrow('Select at least one image.');
     await expect(imagesToPdf([{ bytes: new Uint8Array([0, 1, 2, 3]) }])).rejects.toThrow('not a JPEG or PNG');
