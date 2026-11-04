@@ -1,6 +1,6 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
 import { DocumentThumbnail } from '@/components/documents/DocumentThumbnail';
 import { documentMeta } from '@/components/documents/documentLabels';
@@ -16,6 +16,7 @@ import type { ScanDocument } from '@/types/document';
 import { errorMessage, isCancelled } from '@/utils/errors';
 import { timestampedName, validateName } from '@/utils/filename';
 import { formatBytes } from '@/utils/format';
+import { appAlert } from '@/stores/dialogStore';
 
 export default function MergeScreen() {
   const { colors, spacing, radius, typography } = useAppTheme();
@@ -50,7 +51,7 @@ export default function MergeScreen() {
   const merge = async () => {
     const problem = validateName(name);
     if (problem) {
-      Alert.alert('Check the file name', problem);
+      appAlert('Check the file name', problem);
       return;
     }
     token.current = { cancelled: false };
@@ -65,7 +66,7 @@ export default function MergeScreen() {
       setDocs([]);
       setName(timestampedName('Merged'));
     } catch (error) {
-      if (!isCancelled(error)) Alert.alert('Could not merge', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Could not merge', errorMessage(error));
     } finally {
       setProgress(null);
     }

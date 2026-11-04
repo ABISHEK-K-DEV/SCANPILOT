@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PdfViewer } from '@/components/pdf/PdfViewer';
@@ -17,6 +17,7 @@ import { availableName, deleteDocument, markOpened, recordPageCount } from '@/se
 import { shareDocument } from '@/services/share/shareService';
 import { useAppTheme } from '@/theme';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 function BarButton({ icon, label, onPress }: { icon: IconName; label: string; onPress: () => void }) {
   const { colors, radius } = useAppTheme();
@@ -55,7 +56,7 @@ function DocumentBar({ doc, onMore }: { doc: ScanDocument; onMore: () => void })
       if (source !== 'import') await Promise.all(created.map((c: ScanDocument) => deleteDocument(c.id).catch(() => undefined)));
       router.replace({ pathname: '/document/[id]', params: { id: merged.id } });
     } catch (error) {
-      Alert.alert('Could not add pages', errorMessage(error));
+      appAlert('Could not add pages', errorMessage(error));
     } finally {
       setAppending(false);
     }
@@ -113,7 +114,7 @@ export default function DocumentScreen() {
         headerRight: doc
           ? () => (
               <View style={styles.headerActions}>
-                <IconButton icon="share-outline" label="Share" onPress={() => shareDocument(doc).catch((e) => Alert.alert('Could not share', errorMessage(e)))} />
+                <IconButton icon="share-outline" label="Share" onPress={() => shareDocument(doc).catch((e) => appAlert('Could not share', errorMessage(e)))} />
                 <IconButton icon="ellipsis-horizontal" label="More actions" onPress={() => actions.show(doc)} />
               </View>
             )

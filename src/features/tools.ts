@@ -4,6 +4,10 @@ import type { IconName } from '@/components/ui';
 
 export type ToolId =
   | 'scan'
+  | 'scan-whiteboard'
+  | 'scan-book'
+  | 'scan-id-card'
+  | 'scan-business-card'
   | 'import-pdf'
   | 'import-images'
   | 'text-to-pdf'
@@ -21,6 +25,10 @@ export type ToolId =
   | 'redact'
   | 'ocr'
   | 'pdf-to-word'
+  | 'pdf-to-ppt'
+  | 'pdf-to-excel'
+  | 'extract-pages'
+  | 'remove-pages'
   | 'pdf-to-images'
   | 'protect'
   | 'unlock';
@@ -52,22 +60,30 @@ export const CATEGORIES: readonly { id: ToolCategory; label: string }[] = [
 ];
 
 export const TOOLS: readonly ToolDefinition[] = [
-  { id: 'scan', label: 'Scan document', description: 'Camera scan with edge detection', icon: 'scan', category: 'create', available: true },
+  { id: 'scan', label: 'Scan document', description: 'Auto edge detection', icon: 'scan', category: 'create', available: true },
+  { id: 'scan-id-card', label: 'ID card', description: 'Both sides on one page', icon: 'id-card', category: 'create', available: true },
+  { id: 'scan-business-card', label: 'Business card', description: 'Save as a contact', icon: 'contact', category: 'create', available: true },
+  { id: 'scan-whiteboard', label: 'Whiteboard', description: 'Clean, glare-free notes', icon: 'whiteboard', category: 'create', available: true },
+  { id: 'scan-book', label: 'Book', description: 'Splits open spreads', icon: 'book', category: 'create', available: true },
   { id: 'import-images', label: 'JPG to PDF', description: 'Turn photos into a PDF', icon: 'file-image', category: 'create', available: true },
-  { id: 'import-pdf', label: 'Import PDF', description: 'Add PDFs from your phone', icon: 'document-attach', category: 'create', available: true },
-  { id: 'text-to-pdf', label: 'Text to PDF', description: 'Write or paste text, any language', icon: 'file-type', category: 'create', route: '/tool/text-to-pdf', available: true },
+  { id: 'import-pdf', label: 'Import PDF', description: 'From Files or Drive', icon: 'document-attach', category: 'create', available: true },
+  { id: 'text-to-pdf', label: 'Text to PDF', description: 'Type or paste any text', icon: 'file-type', category: 'create', route: '/tool/text-to-pdf', available: true },
   { id: 'merge', label: 'Merge PDF', description: 'Combine several PDFs', icon: 'git-merge', category: 'organise', route: '/tool/merge', available: true },
-  { id: 'split', label: 'Split PDF', description: 'Ranges, pages or every page', icon: 'cut', category: 'organise', route: '/tool/split', available: true },
+  { id: 'split', label: 'Split PDF', description: 'By ranges or every page', icon: 'cut', category: 'organise', route: '/tool/split', available: true },
   { id: 'organize', label: 'Organise pages', description: 'Reorder, rotate, delete', icon: 'albums', category: 'organise', route: '/tool/organize', available: true },
+  { id: 'extract-pages', label: 'Extract pages', description: 'Pick pages for a new PDF', icon: 'copy-outline', category: 'organise', route: '/tool/split?mode=extract', available: true },
+  { id: 'remove-pages', label: 'Remove pages', description: 'Delete unwanted pages', icon: 'trash-outline', category: 'organise', route: '/tool/organize', available: true },
   { id: 'rotate', label: 'Rotate PDF', description: 'Turn all pages at once', icon: 'refresh', category: 'organise', route: '/tool/rotate', available: true },
   { id: 'crop', label: 'Crop PDF', description: 'Trim page margins', icon: 'crop', category: 'organise', route: '/tool/crop', available: true },
-  { id: 'edit', label: 'Edit PDF', description: 'Text, draw, highlight, shapes', icon: 'file-pen', category: 'edit', route: '/tool/edit', available: NATIVE },
-  { id: 'sign', label: 'Sign PDF', description: 'Draw and place your signature', icon: 'signature', category: 'edit', route: '/tool/sign', available: NATIVE },
+  { id: 'edit', label: 'Edit PDF', description: 'Text, draw, shapes', icon: 'file-pen', category: 'edit', route: '/tool/edit', available: NATIVE },
+  { id: 'sign', label: 'Sign PDF', description: 'Draw and place a signature', icon: 'signature', category: 'edit', route: '/tool/sign', available: NATIVE },
   { id: 'watermark', label: 'Watermark', description: 'Stamp text across pages', icon: 'water', category: 'edit', route: '/tool/watermark', available: true },
   { id: 'page-numbers', label: 'Page numbers', description: 'Number every page', icon: 'list', category: 'edit', route: '/tool/page-numbers', available: true },
-  { id: 'redact', label: 'Redact PDF', description: 'Permanently black out info', icon: 'eye-off', category: 'edit', route: '/tool/redact', available: NATIVE },
-  { id: 'ocr', label: 'Extract text', description: 'Offline OCR · English & Hindi', icon: 'scan-text', category: 'convert', route: '/tool/ocr', available: NATIVE },
+  { id: 'redact', label: 'Redact PDF', description: 'Black out private info', icon: 'eye-off', category: 'edit', route: '/tool/redact', available: NATIVE },
+  { id: 'ocr', label: 'Extract text', description: 'Photos and PDFs to text', icon: 'scan-text', category: 'convert', route: '/tool/ocr', available: NATIVE },
   { id: 'pdf-to-word', label: 'PDF to Word', description: 'Editable text as .docx', icon: 'document-text', category: 'convert', route: '/tool/ocr?output=word', available: NATIVE },
+  { id: 'pdf-to-ppt', label: 'PDF to PowerPoint', description: 'Every page as a slide', icon: 'presentation-outline', category: 'convert', route: '/tool/pdf-to-office?format=pptx', available: NATIVE },
+  { id: 'pdf-to-excel', label: 'PDF to Excel', description: 'Tables to spreadsheets', icon: 'sheet', category: 'convert', route: '/tool/pdf-to-office?format=xlsx', available: NATIVE },
   { id: 'pdf-to-images', label: 'PDF to JPG', description: 'Every page as an image', icon: 'image', category: 'convert', route: '/tool/pdf-to-images', available: NATIVE },
   { id: 'compress', label: 'Compress PDF', description: 'Make files smaller', icon: 'contract', category: 'optimise', route: '/tool/compress', available: NATIVE },
   { id: 'repair', label: 'Repair PDF', description: 'Fix damaged files', icon: 'construct', category: 'optimise', route: '/tool/repair', available: true },

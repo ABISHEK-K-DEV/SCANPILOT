@@ -109,6 +109,24 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (permissions / conditions / limitations) and full text; third-party acknowledgements are collapsed beneath it (their notices must still be shipped).
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+## Scan modes, in-app dialogs, Office export, OCR fixes ✅
+- **Scan modes** in the camera (`services/scan/modes.ts`): **Document**, **Whiteboard** (new `whiteboard` filter: glare/shadow removal, white board, vivid markers), **Book** (two-page spread split into left/right pages), **ID card** (front → back, saved on one A4 page at true ID-1 size via `idCardSheetPdf`), **Business card** (on-device OCR → `parseBusinessCard` → *Save contact* as .vcf, or copy). Shortcuts on Home and in Tools; the frame guide changes shape per mode.
+- **Dialogs**: every native `Alert` replaced by an in-app dialog (`stores/dialogStore.ts` + `DialogHost`): tone icon, Cancel/confirm buttons with destructive styling, spring-in animation, queueing. Quick confirmations (copied, saved, cleared) are toasts.
+- **Image to text** fixed: photos are normalised before recognition (EXIF rotation applied, size capped, HEIC/WebP converted, content:// resolved), a **Scan with camera** source was added, and recognised text is editable before copying/exporting.
+- **PDF to PowerPoint** (page → slide, `export/pptx.ts`) and **PDF to Excel** (OCR line boxes → rows/columns, `export/xlsx.ts`), both verified with python-pptx/openpyxl in tests. **Extract pages** and **Remove pages** shortcuts.
+- **Loading**: skeleton placeholders for document lists on Home and Files.
+
+### Feature coverage vs. common scanner / PDF-tool apps
+| Area | ScanPilot |
+| --- | --- |
+| Capture | Document, Whiteboard, Book, ID card, Business card; batch; gallery import; auto edge detection; filters; crop; rotate; retake; reorder |
+| Organise | Merge, Split, Extract pages, Remove pages, Organise (reorder/rotate/duplicate), Rotate, Crop |
+| Optimise | Compress, Repair |
+| Convert | JPG → PDF, Text → PDF, PDF → JPG, PDF → Word, PDF → PowerPoint, PDF → Excel, OCR (searchable PDF) |
+| Edit | Edit (text, draw, shapes, images, whiteout), Sign, Watermark, Page numbers, Redact |
+| Security | Protect, Unlock, App lock, Locked folder |
+| Not offered (needs a cloud service or a full office engine, which would break the on-device promise) | Word/PowerPoint/Excel → PDF, HTML → PDF, PDF/A, Compare, AI translate/summarise |
+
 ## ScanPilot camera & redesigned review ✅
 The capture screens are now ScanPilot's own — Google's scanner UI (its add-page icon, Enhance/Filters/Crop bar) no longer appears by default.
 - **Camera** (`src/app/scan/camera.tsx`, expo-camera behind `src/native/camera`): frame guide, flash off/auto/on, grid, gallery import, batch capture with a live page stack and count, *Done* → review. Permission screen with *Open settings* and *Choose photos instead*. Modes: new, append, replace (Retake) and return (tools await pages through `services/scan/cameraBridge.ts`).

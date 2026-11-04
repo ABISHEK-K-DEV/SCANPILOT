@@ -209,3 +209,15 @@ export async function filterPreviews(sourceUri: string, filters: readonly Filter
   }
   return out;
 }
+
+/** Splits a two-page book spread into its left and right pages. */
+export async function splitSpread(page: ScanPage): Promise<[ScanPage, ScanPage]> {
+  const half = Math.floor(page.width / 2);
+  const side = async (x: number, width: number): Promise<ScanPage> => {
+    const saved = await render(page.uri, (ctx) => {
+      ctx.crop({ originX: x, originY: 0, width, height: page.height });
+    });
+    return { id: createId(), uri: saved.uri, width: saved.width, height: saved.height, originalUri: saved.uri, originalWidth: saved.width, originalHeight: saved.height };
+  };
+  return [await side(0, half), await side(half, page.width - half)];
+}

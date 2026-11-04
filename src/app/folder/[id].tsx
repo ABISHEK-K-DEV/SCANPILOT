@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+
 
 import { LibraryBrowser } from '@/components/documents/LibraryBrowser';
 import { ActionSheet, EmptyState, IconButton, LoadingState, Screen, TextPromptModal } from '@/components/ui';
@@ -9,6 +9,7 @@ import { deleteFolder, renameFolder, setFolderLocked } from '@/services/library/
 import { authenticate, canAuthenticate } from '@/services/security/authService';
 import { useSecurityStore } from '@/stores/securityStore';
 import { errorMessage } from '@/utils/errors';
+import { appAlert, toast } from '@/stores/dialogStore';
 
 export default function FolderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,13 +27,13 @@ export default function FolderScreen() {
     if (!folder.data) return;
     if (!isLocked) {
       if (!(await canAuthenticate())) {
-        Alert.alert('Set up a screen lock first', 'Locked folders use your fingerprint, face or device PIN. Add one in your phone settings.');
+        appAlert('Set up a screen lock first', 'Locked folders use your fingerprint, face or device PIN. Add one in your phone settings.');
         return;
       }
       if (!(await authenticate('Lock this folder'))) return;
       unlockFolder(id);
       await setFolderLocked(id, true);
-      Alert.alert('Folder locked', 'Its documents are now hidden from Home, Files and search, and need your fingerprint, face or PIN to open.');
+      toast('Folder locked · hidden from Home, Files and search');
     } else {
       if (!(await authenticate('Remove the lock'))) return;
       await setFolderLocked(id, false);
@@ -41,7 +42,7 @@ export default function FolderScreen() {
 
   const confirmDelete = () => {
     if (!folder.data) return;
-    Alert.alert('Delete folder?', `"${folder.data.name}" will be removed. Its documents are kept and moved to All documents.`, [
+    appAlert('Delete folder?', `"${folder.data.name}" will be removed. Its documents are kept and moved to All documents.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete folder',
@@ -49,7 +50,7 @@ export default function FolderScreen() {
         onPress: () =>
           deleteFolder(id)
             .then(() => router.back())
-            .catch((e) => Alert.alert('Could not delete folder', errorMessage(e))),
+            .catch((e) => appAlert('Could not delete folder', errorMessage(e))),
       },
     ]);
   };
@@ -84,7 +85,7 @@ export default function FolderScreen() {
             label: isLocked ? 'Remove lock' : 'Lock folder',
             icon: isLocked ? 'lock-open-outline' : 'lock-closed-outline',
             hint: isLocked ? undefined : 'Hide its documents and require your fingerprint, face or PIN',
-            onPress: () => toggleLock().catch((e) => Alert.alert('Could not change the lock', errorMessage(e))),
+            onPress: () => toggleLock().catch((e) => appAlert('Could not change the lock', errorMessage(e))),
           },
           { key: 'delete', label: 'Delete folder', icon: 'trash-outline', destructive: true, hint: 'Documents are kept', onPress: confirmDelete },
         ]}

@@ -9,6 +9,7 @@ import {
   replacePage,
   selectionAfterRemove,
 } from '@/services/scan/sessionReducer';
+import type { ScanMode } from '@/services/scan/modes';
 import type { DocumentPreset, ScanPage } from '@/services/scan/types';
 import { timestampedName } from '@/utils/filename';
 
@@ -19,6 +20,9 @@ interface ScanSessionState {
   name: string;
   /** Folder the finished PDF will be saved into. */
   folderId: string | null;
+  /** Camera mode the session was captured in (ID card → one-page sheet, business card → contact). */
+  mode: ScanMode;
+  setMode: (mode: ScanMode, preset?: DocumentPreset, namePrefix?: string) => void;
   start: (folderId?: string | null) => void;
   add: (pages: ScanPage[], afterSelected?: boolean) => void;
   select: (id: string) => void;
@@ -42,9 +46,17 @@ export const useScanSession = create<ScanSessionState>((set, get) => ({
   preset: 'original',
   name: '',
   folderId: null,
+  mode: 'document',
+  setMode: (mode, preset, namePrefix) =>
+    set((s) => ({
+      mode,
+      preset: preset ?? s.preset,
+      // Rename only while the name is still the automatic one.
+      name: namePrefix && s.pages.length === 0 ? timestampedName(namePrefix) : s.name,
+    })),
   start: (folderId = null) => {
     deleteSessionFiles();
-    set({ pages: [], selectedId: null, preset: 'original', name: timestampedName('Scan'), folderId });
+    set({ pages: [], selectedId: null, preset: 'original', name: timestampedName('Scan'), folderId, mode: 'document' });
   },
   add: (added, afterSelected = false) => {
     const { pages, selectedId } = get();
@@ -69,6 +81,6 @@ export const useScanSession = create<ScanSessionState>((set, get) => ({
   setName: (name) => set({ name }),
   clear: () => {
     deleteSessionFiles();
-    set({ pages: [], selectedId: null, preset: 'original', name: '', folderId: null });
+    set({ pages: [], selectedId: null, preset: 'original', name: '', folderId: null, mode: 'document' });
   },
 }));

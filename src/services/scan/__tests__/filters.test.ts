@@ -43,6 +43,13 @@ describe('filters', () => {
     expect(at(out, 15, 30)).toBeLessThan(at(out, 5, 5));
   });
 
+  it('whiteboard turns the board white (even in shadow) and keeps strokes', () => {
+    const out = applyFilter(page(), 'whiteboard');
+    expect(at(out, 40, 5)).toBe(255); // board in light
+    expect(at(out, 60, 5)).toBe(255); // board in shadow
+    expect(at(out, 15, 30)).toBeLessThan(120); // marker stroke
+  });
+
   it('grayscale removes colour; original copies', () => {
     const g = applyFilter(page(), 'grayscale');
     const o = (5 * g.width + 5) * 4;

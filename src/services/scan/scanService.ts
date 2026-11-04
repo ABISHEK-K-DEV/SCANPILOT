@@ -5,7 +5,7 @@ import { launchImageLibraryAsync } from 'expo-image-picker';
 
 import { getScanner } from '@/native/scanner';
 import { createDocumentFromBytes } from '@/services/library/documentService';
-import { imagesToPdf } from '@/services/pdf/pdfService';
+import { idCardSheetPdf, imagesToPdf } from '@/services/pdf/pdfService';
 import type { CancelToken, ImageInput, Progress } from '@/services/pdf/types';
 import { readBytes } from '@/services/storage/fileStore';
 import type { ScanDocument } from '@/types/document';
@@ -59,7 +59,15 @@ export async function pickPages(options: { single?: boolean } & IngestCallbacks 
 
 export async function savePagesAsPdf(
   pages: readonly ScanPage[],
-  options: { name: string; preset: DocumentPreset; folderId: string | null; onProgress?: Progress; cancelToken?: CancelToken },
+  options: {
+    name: string;
+    preset: DocumentPreset;
+    folderId: string | null;
+    /** `id-card-sheet`: front and back on one A4 page at true card size. */
+    layout?: 'pages' | 'id-card-sheet';
+    onProgress?: Progress;
+    cancelToken?: CancelToken;
+  },
 ): Promise<ScanDocument> {
   const total = pages.length + 1;
   const images: ImageInput[] = [];
@@ -68,17 +76,20 @@ export async function savePagesAsPdf(
     images.push({ bytes: await readBytes(pages[i].uri), mimeType: 'image/jpeg' });
     options.onProgress?.(i + 1, total);
   }
-  const bytes = await imagesToPdf(images, {
-    pageSize: pageSizeForPreset(options.preset),
-    margin: options.preset === 'a4' || options.preset === 'letter' ? 18 : 0,
-    title: options.name,
-    cancelToken: options.cancelToken,
-  });
+  const sheet = options.layout === 'id-card-sheet' && images.length <= 2;
+  const bytes = sheet
+    ? await idCardSheetPdf(images, { title: options.name })
+    : await imagesToPdf(images, {
+        pageSize: pageSizeForPreset(options.preset),
+        margin: options.preset === 'a4' || options.preset === 'letter' ? 18 : 0,
+        title: options.name,
+        cancelToken: options.cancelToken,
+      });
   const doc = await createDocumentFromBytes(bytes, {
     name: options.name,
     source: 'scan',
     folderId: options.folderId,
-    pageCount: pages.length,
+    pageCount: sheet ? 1 : pages.length,
   });
   options.onProgress?.(total, total);
   return doc;

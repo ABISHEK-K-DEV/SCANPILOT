@@ -4,7 +4,7 @@
  */
 import type { RgbaImage } from './warp';
 
-export type FilterId = 'original' | 'auto' | 'grayscale' | 'bw' | 'contrast' | 'clarity' | 'photo';
+export type FilterId = 'original' | 'auto' | 'grayscale' | 'bw' | 'contrast' | 'clarity' | 'photo' | 'whiteboard';
 
 export const FILTERS: readonly { id: FilterId; label: string }[] = [
   { id: 'original', label: 'Original' },
@@ -14,6 +14,7 @@ export const FILTERS: readonly { id: FilterId; label: string }[] = [
   { id: 'bw', label: 'Black & white' },
   { id: 'contrast', label: 'High contrast' },
   { id: 'photo', label: 'Photo' },
+  { id: 'whiteboard', label: 'Whiteboard' },
 ];
 
 export interface Adjustments {
@@ -208,6 +209,29 @@ function clarity(img: RgbaImage): RgbaImage {
   return { width: w, height: h, data: out };
 }
 
+/**
+ * Whiteboard: removes glare/shadows (background division), turns the board
+ * pure white and makes marker strokes vivid.
+ */
+function whiteboard(img: RgbaImage): RgbaImage {
+  const flat = clarity(img);
+  return mapChannels(flat, (r, g, b, out, o) => {
+    const v = luma(r, g, b);
+    if (v > 205) {
+      out[o] = 255;
+      out[o + 1] = 255;
+      out[o + 2] = 255;
+      return;
+    }
+    // Saturate and slightly darken strokes so thin marker lines read clearly.
+    const k = 1.8;
+    const dark = 0.9;
+    out[o] = clamp((v + (r - v) * k) * dark);
+    out[o + 1] = clamp((v + (g - v) * k) * dark);
+    out[o + 2] = clamp((v + (b - v) * k) * dark);
+  });
+}
+
 export function applyFilter(img: RgbaImage, filter: FilterId): RgbaImage {
   switch (filter) {
     case 'auto':
@@ -232,6 +256,8 @@ export function applyFilter(img: RgbaImage, filter: FilterId): RgbaImage {
     }
     case 'clarity':
       return clarity(img);
+    case 'whiteboard':
+      return whiteboard(img);
     case 'photo': {
       const s = stretch(img, 1.0);
       return mapChannels(s, (r, g, b, out, o) => {

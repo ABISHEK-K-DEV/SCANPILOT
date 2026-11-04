@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { type ReactNode, useRef, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
 import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
@@ -12,6 +12,7 @@ import type { CancelToken, Progress } from '@/services/pdf/types';
 import { useAppTheme } from '@/theme';
 import type { ScanDocument } from '@/types/document';
 import { errorMessage, isCancelled } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 interface SimpleDocToolProps {
   title: string;
@@ -44,7 +45,7 @@ export function SimpleDocTool({ title, icon, intro, actionLabel, resultTitle, ch
       const out = await run(doc, (d, t) => setProgress(t > 0 ? d / t : null), token.current);
       setResults(Array.isArray(out) ? out : [out]);
     } catch (error) {
-      if (!isCancelled(error)) Alert.alert(`Could not ${actionLabel.toLowerCase()}`, errorMessage(error));
+      if (!isCancelled(error)) appAlert(`Could not ${actionLabel.toLowerCase()}`, errorMessage(error));
     } finally {
       setProgress(null);
     }

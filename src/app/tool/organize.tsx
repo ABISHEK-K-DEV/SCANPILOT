@@ -1,6 +1,6 @@
 import { router, Stack, usePreventRemove } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ToolbarButton } from '@/components/scan/ToolbarButton';
@@ -21,6 +21,7 @@ import {
 import { extractToNewDocument, loadPageCount, renderPageThumbnails, saveOrganised } from '@/services/tools/organizeService';
 import { useAppTheme } from '@/theme';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 export default function OrganizeScreen() {
   const { colors, spacing } = useAppTheme();
@@ -60,7 +61,7 @@ export default function OrganizeScreen() {
   }, [doc]);
 
   const disablePrevention = usePreventRemove(dirty, ({ repeat }) => {
-    Alert.alert('Discard changes?', 'Your page changes have not been saved.', [
+    appAlert('Discard changes?', 'Your page changes have not been saved.', [
       { text: 'Keep editing', style: 'cancel' },
       { text: 'Discard', style: 'destructive', onPress: repeat },
     ]);
@@ -76,10 +77,10 @@ export default function OrganizeScreen() {
 
   const confirmDelete = () => {
     if (selected.size === plan.length) {
-      Alert.alert('Keep at least one page', 'A PDF needs at least one page. To remove the whole document, delete it from your library.');
+      appAlert('Keep at least one page', 'A PDF needs at least one page. To remove the whole document, delete it from your library.');
       return;
     }
-    Alert.alert(`Delete ${selected.size} ${selected.size === 1 ? 'page' : 'pages'}?`, 'They are removed when you save.', [
+    appAlert(`Delete ${selected.size} ${selected.size === 1 ? 'page' : 'pages'}?`, 'They are removed when you save.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -103,12 +104,12 @@ export default function OrganizeScreen() {
     setBusy('Extracting pages');
     try {
       const created = await extractToNewDocument(doc, plan.filter((p) => selected.has(p.key)));
-      Alert.alert('Pages extracted', `"${created.name}" was added to your library.`, [
+      appAlert('Pages extracted', `"${created.name}" was added to your library.`, [
         { text: 'Stay here', style: 'cancel' },
         { text: 'Open', onPress: () => router.push({ pathname: '/document/[id]', params: { id: created.id } }) },
       ]);
     } catch (error) {
-      Alert.alert('Could not extract pages', errorMessage(error));
+      appAlert('Could not extract pages', errorMessage(error));
     } finally {
       setBusy(null);
     }
@@ -122,14 +123,14 @@ export default function OrganizeScreen() {
       disablePrevention();
       router.replace({ pathname: '/document/[id]', params: { id: saved.id } });
     } catch (error) {
-      Alert.alert('Could not save', errorMessage(error));
+      appAlert('Could not save', errorMessage(error));
     } finally {
       setBusy(null);
     }
   };
 
   const confirmReplace = () =>
-    Alert.alert('Replace the original?', `"${doc?.name}" will be updated with your changes. This can't be undone.`, [
+    appAlert('Replace the original?', `"${doc?.name}" will be updated with your changes. This can't be undone.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Replace', style: 'destructive', onPress: () => void save('replace') },
     ]);

@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CornerEditor } from '@/components/scan/CornerEditor';
@@ -10,6 +10,7 @@ import { cropImage } from '@/services/scan/pageProcessing';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { useAppTheme } from '@/theme';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 export default function CropScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,14 +31,14 @@ export default function CropScreen() {
       update(page.id, { ...result, base: undefined, filter: undefined });
       router.back();
     } catch (error) {
-      Alert.alert('Could not crop', errorMessage(error));
+      appAlert('Could not crop', errorMessage(error));
     } finally {
       setBusy(false);
     }
   };
 
   const restoreOriginal = () =>
-    Alert.alert('Restore original?', 'Undo all rotation and cropping for this page.', [
+    appAlert('Restore original?', 'Undo all rotation and cropping for this page.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Restore',

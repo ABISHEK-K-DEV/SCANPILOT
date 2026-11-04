@@ -1,15 +1,17 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+
 
 import { ProgressOverlay } from '@/components/ui';
 import { ScannerError } from '@/native/scanner';
 import { filterImage } from '@/services/scan/pageProcessing';
 import { capturePages, type IngestCallbacks, pickPages } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
+import type { ScanMode } from '@/services/scan/modes';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 interface Progress {
   title: string;
@@ -54,7 +56,7 @@ export function useScanFlow() {
   };
 
   const offerPhotosInstead = (message: string, mode: AddMode, navigate: boolean) => {
-    Alert.alert('Scanner unavailable', message, [
+    appAlert('Scanner unavailable', message, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Choose photos', onPress: () => void addFromPhotos(mode, navigate) },
     ]);
@@ -69,7 +71,7 @@ export function useScanFlow() {
       if (navigate) router.push('/scan/review');
     } catch (error) {
       setProgress(null);
-      Alert.alert('Could not add photos', errorMessage(error));
+      appAlert('Could not add photos', errorMessage(error));
     }
   }
 
@@ -93,10 +95,11 @@ export function useScanFlow() {
     return out;
   }
 
-  async function capture(mode: AddMode = 'append', navigate = false): Promise<void> {
+  async function capture(mode: AddMode = 'append', navigate = false, scanMode?: ScanMode): Promise<void> {
     // ScanPilot's own camera screen (default). It adds pages to the session itself.
     if (useSettingsStore.getState().settings.scanner === 'camera') {
-      const params = typeof mode === 'object' ? { mode: 'replace', replace: mode.replace } : { mode: navigate ? 'new' : 'append' };
+      const params: Record<string, string> =
+        typeof mode === 'object' ? { mode: 'replace', replace: mode.replace } : { mode: navigate ? 'new' : 'append', ...(scanMode ? { scanMode } : {}) };
       router.push({ pathname: '/scan/camera', params });
       return;
     }
@@ -112,14 +115,15 @@ export function useScanFlow() {
     } catch (error) {
       setProgress(null);
       if (error instanceof ScannerError && error.reason === 'unavailable') offerPhotosInstead(error.message, mode, navigate);
-      else Alert.alert('Scan failed', errorMessage(error));
+      else appAlert('Scan failed', errorMessage(error));
     }
   }
 
   /** Begins a brand-new scan session and opens the review screen when pages arrive. */
-  const startScan = (folderId: string | null = null) => {
+  /** Begins a new scan; `scanMode` preselects Whiteboard / Book / ID card / Business card. */
+  const startScan = (folderId: string | null = null, scanMode?: ScanMode) => {
     useScanSession.getState().start(folderId);
-    void capture('append', true);
+    void capture('append', true, scanMode);
   };
 
   const startFromPhotos = (folderId: string | null = null) => {

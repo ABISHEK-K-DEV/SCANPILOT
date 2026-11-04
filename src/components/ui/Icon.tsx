@@ -101,6 +101,15 @@ import FilePlus from 'lucide-react-native/icons/file-plus';
 import Grid3x3 from 'lucide-react-native/icons/grid-3x3';
 import ImagePlus from 'lucide-react-native/icons/image-plus';
 import Zap from 'lucide-react-native/icons/zap';
+import Contact from 'lucide-react-native/icons/contact';
+import IdCard from 'lucide-react-native/icons/id-card';
+import BookOpen from 'lucide-react-native/icons/book-open';
+import Presentation from 'lucide-react-native/icons/presentation';
+import Sheet from 'lucide-react-native/icons/sheet';
+import Mail from 'lucide-react-native/icons/mail';
+import Phone from 'lucide-react-native/icons/phone';
+import Globe from 'lucide-react-native/icons/globe';
+import UserRound from 'lucide-react-native/icons/user-round';
 import ZapOff from 'lucide-react-native/icons/zap-off';
 
 import { useAppTheme } from '@/theme';
@@ -186,6 +195,16 @@ const ICONS = {
   'image-plus': { c: ImagePlus },
   'grid-3x3': { c: Grid3x3 },
   flash: { c: Zap },
+  contact: { c: Contact },
+  'id-card': { c: IdCard },
+  book: { c: BookOpen },
+  whiteboard: { c: Presentation },
+  'presentation-outline': { c: Presentation },
+  sheet: { c: Sheet },
+  mail: { c: Mail },
+  phone: { c: Phone },
+  globe: { c: Globe },
+  person: { c: UserRound },
   'flash-off': { c: ZapOff },
   'arrow-undo-outline': { c: RotateCcw },
   'arrow-redo-outline': { c: RotateCw },

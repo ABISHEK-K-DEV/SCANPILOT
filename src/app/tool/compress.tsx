@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
 import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
@@ -21,6 +21,7 @@ import {
 import { useAppTheme } from '@/theme';
 import { errorMessage, isCancelled } from '@/utils/errors';
 import { formatBytes } from '@/utils/format';
+import { appAlert } from '@/stores/dialogStore';
 
 const ICONS: Record<CompressionLevel, 'contract-outline' | 'remove-circle-outline' | 'arrow-down-circle-outline'> = {
   low: 'remove-circle-outline',
@@ -58,7 +59,7 @@ export default function CompressScreen() {
     try {
       setResult(await compressDocument(doc, level, { cancelToken: token.current, onProgress: (d, t) => setProgress(d / t) }));
     } catch (error) {
-      if (!isCancelled(error)) Alert.alert('Could not compress', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Could not compress', errorMessage(error));
     } finally {
       setProgress(null);
     }

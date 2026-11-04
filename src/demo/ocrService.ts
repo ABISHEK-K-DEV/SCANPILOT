@@ -14,8 +14,9 @@ export async function recogniseDocument(doc: ScanDocument): Promise<OcrRun> {
   void doc;
   return { pages: SAMPLE.map((text) => ({ text, lines: [] })) };
 }
-export async function recogniseImages(): Promise<OcrRun> {
-  return { pages: [{ text: SAMPLE[0], lines: [] }] };
+const CARD = 'A. Rao\nSenior Product Designer\nBrightleaf Technologies Pvt Ltd\n+91 98450 12345\nasha.rao@brightleaf.in\nwww.brightleaf.in\n4th Floor, 12 MG Road, Bengaluru 560001';
+export async function recogniseImages(uris: readonly string[] = []): Promise<OcrRun> {
+  return { pages: [{ text: uris.some((u) => u.includes('doc-card')) ? CARD : SAMPLE[0], lines: [] }] };
 }
 export function findMatches(pages: readonly { text: string }[], query: string): number[] {
   const q = query.trim().toLowerCase();

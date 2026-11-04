@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import CompressScreen from '@/app/tool/compress';
@@ -13,6 +12,7 @@ import { importPdfs } from '@/services/import/importService';
 import { mergeDocuments } from '@/services/tools/mergeService';
 import { saveOrganised } from '@/services/tools/organizeService';
 import { splitDocument } from '@/services/tools/splitService';
+import { useDialogStore } from '@/stores/dialogStore';
 import type { ScanDocument } from '@/types/document';
 
 const mockParams: { id?: string; ids?: string } = {};
@@ -179,12 +179,11 @@ describe('Organise pages', () => {
 
   it('refuses to delete every page', async () => {
     mockParams.id = 'c';
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
     await render(<OrganizeScreen />, { wrapper });
     await fireEvent.press(await screen.findByLabelText('Select all'));
     await fireEvent.press(screen.getByLabelText('Delete'));
-    expect(alert).toHaveBeenCalledWith('Keep at least one page', expect.any(String));
-    alert.mockRestore();
+    expect(useDialogStore.getState().queue[0]?.title).toBe('Keep at least one page');
+    useDialogStore.setState({ queue: [] });
   });
 });
 

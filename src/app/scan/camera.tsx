@@ -2,17 +2,19 @@ import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Linking, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, Icon, type IconName } from '@/components/ui';
 import { CameraView, type FlashMode, useCameraPermissions } from '@/native/camera';
 import { hasCameraRequest, resolveCameraRequest } from '@/services/scan/cameraBridge';
-import { autoCropPage, filterImage, ingestImage } from '@/services/scan/pageProcessing';
+import { type ScanMode, SCAN_MODES, captureHint, scanMode } from '@/services/scan/modes';
+import { autoCropPage, filterImage, ingestImage, splitSpread } from '@/services/scan/pageProcessing';
 import { pickPages } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 /**
  * ScanPilot's own document camera (replaces the system scanner UI):
@@ -26,19 +28,29 @@ import { errorMessage } from '@/utils/errors';
 type Mode = 'new' | 'append' | 'replace' | 'return';
 
 const DEMO = process.env.EXPO_PUBLIC_SCANPILOT_DEMO === '1';
+const MODE_ICON: Record<ScanMode, IconName> = { document: 'scan', whiteboard: 'whiteboard', book: 'book', 'id-card': 'id-card', 'business-card': 'contact' };
 const INK = '#0B0D12';
 const FLASH_ORDER: FlashMode[] = ['off', 'auto', 'on'];
 const FLASH_LABEL: Record<string, string> = { off: 'Flash off', auto: 'Flash auto', on: 'Flash on' };
 
-async function processPhoto(uri: string, width?: number, height?: number): Promise<ScanPage> {
+async function enhance(page: ScanPage, mode: ScanMode): Promise<ScanPage> {
+  const filter = scanMode(mode).filter;
+  try {
+    const out = await filterImage(page.uri, filter);
+    return { ...page, ...out, base: { uri: page.uri, width: page.width, height: page.height }, filter };
+  } catch {
+    return page;
+  }
+}
+
+/** Photo → page(s): edge detection + perspective fix, book split, mode filter. */
+async function processPhoto(uri: string, mode: ScanMode, width?: number, height?: number): Promise<ScanPage[]> {
   const page = await ingestImage(uri, { deleteSource: true, width, height });
   const cropped = await autoCropPage(page);
-  try {
-    const enhanced = await filterImage(cropped.uri, 'auto');
-    return { ...cropped, ...enhanced, base: { uri: cropped.uri, width: cropped.width, height: cropped.height }, filter: 'auto' };
-  } catch {
-    return cropped;
-  }
+  const pages = mode === 'book' && cropped.width > cropped.height ? await splitSpread(cropped) : [cropped];
+  const out: ScanPage[] = [];
+  for (const p of pages) out.push(await enhance(p, mode));
+  return out;
 }
 
 function RoundButton({ icon, label, onPress, active }: { icon: IconName; label: string; onPress: () => void; active?: boolean }) {
@@ -56,9 +68,21 @@ function RoundButton({ icon, label, onPress, active }: { icon: IconName; label: 
 }
 
 export default function CameraScreen() {
-  const params = useLocalSearchParams<{ mode?: Mode; replace?: string }>();
+  const params = useLocalSearchParams<{ mode?: Mode; replace?: string; scanMode?: ScanMode }>();
   const mode: Mode = params.mode ?? 'new';
   const single = mode === 'replace';
+  const [captureMode, setCaptureMode] = useState<ScanMode>(
+    () => params.scanMode ?? (mode === 'append' || mode === 'replace' ? useScanSession.getState().mode : 'document'),
+  );
+  const def = scanMode(captureMode);
+  const modeBar = useRef<ScrollViewInstance>(null);
+  const modeX = useRef<Record<string, { x: number; width: number }>>({});
+  const [barWidth, setBarWidth] = useState(0);
+  // Keep the selected mode centred in the mode bar.
+  useEffect(() => {
+    const m = modeX.current[captureMode];
+    if (m && barWidth) modeBar.current?.scrollTo({ x: Math.max(0, m.x + m.width / 2 - barWidth / 2), animated: true });
+  }, [captureMode, barWidth]);
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const camera = useRef<CameraView>(null);
@@ -83,7 +107,7 @@ export default function CameraScreen() {
   );
 
   const allowLeave = usePreventRemove(pages.length > 0 && !finished, ({ repeat }) => {
-    Alert.alert('Discard scanned pages?', `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} will be lost.`, [
+    appAlert('Discard scanned pages?', `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} will be lost.`, [
       { text: 'Keep scanning', style: 'cancel' },
       { text: 'Discard', style: 'destructive', onPress: repeat },
     ]);
@@ -118,6 +142,7 @@ export default function CameraScreen() {
       router.back();
       return;
     }
+    if (mode === 'new') session.setMode(captureMode, def.preset, def.namePrefix);
     session.add(result);
     if (mode === 'append') router.back();
     else router.replace('/scan/review');
@@ -130,7 +155,7 @@ export default function CameraScreen() {
         const out = await task();
         if (out) setPages((prev) => [...prev, ...(Array.isArray(out) ? out : [out])]);
       } catch (error) {
-        Alert.alert('Could not process the photo', errorMessage(error));
+        appAlert('Could not process the photo', errorMessage(error));
       } finally {
         setProcessing((n) => n - 1);
       }
@@ -145,25 +170,26 @@ export default function CameraScreen() {
     Animated.timing(flashOverlay, { toValue: 0, duration: 260, useNativeDriver: true }).start();
     try {
       if (DEMO) {
-        await enqueue(() => processPhoto('/demo-assets/scan/page-2.jpg'));
+        await enqueue(() => processPhoto('/demo-assets/scan/page-2.jpg', captureMode));
       } else {
         const photo = await camera.current?.takePictureAsync({ quality: 0.92, exif: false });
         if (!photo) return;
-        const task = enqueue(() => processPhoto(photo.uri, photo.width, photo.height));
+        const task = enqueue(() => processPhoto(photo.uri, captureMode, photo.width, photo.height));
         if (single) {
           await task;
         }
       }
     } catch (error) {
-      Alert.alert('Could not take the photo', errorMessage(error));
+      appAlert('Could not take the photo', errorMessage(error));
     } finally {
       setShooting(false);
     }
   };
 
-  // Single-page mode (Retake) finishes as soon as the page is ready.
+  // Retake finishes after one page; ID cards after front + back.
+  const finishAfter = single ? 1 : mode === 'return' || mode === 'new' ? def.autoFinishAfter : 0;
   useEffect(() => {
-    if (single && pages.length === 1 && !done.current) void finish(pages);
+    if (finishAfter > 0 && pages.length >= finishAfter && !done.current) void finish(pages);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pages.length]);
 
@@ -177,9 +203,9 @@ export default function CameraScreen() {
     <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
       <RoundButton icon="close" label="Close camera" onPress={close} />
       <View style={styles.titlePill}>
-        <Icon name="scan" size={15} color="#FFFFFF" />
+        <Icon name={MODE_ICON[captureMode]} size={15} color="#FFFFFF" />
         <AppText variant="caption" color="#FFFFFF" style={styles.bold}>
-          {single ? 'Retake page' : 'Document'}
+          {single ? 'Retake page' : def.label}
         </AppText>
       </View>
       <View style={styles.topRight}>
@@ -255,7 +281,8 @@ export default function CameraScreen() {
 
         {/* Page frame guide */}
         <View style={[StyleSheet.absoluteFill, styles.guideWrap]} pointerEvents="none">
-          <View style={styles.guide}>
+          <View style={[styles.guide, def.aspect >= 1 ? { width: '88%', aspectRatio: def.aspect } : { width: '80%', aspectRatio: def.aspect }]}>
+            {captureMode === 'book' ? <View style={styles.spine} /> : null}
             <View style={[styles.corner, styles.tl]} />
             <View style={[styles.corner, styles.tr]} />
             <View style={[styles.corner, styles.bl]} />
@@ -263,7 +290,7 @@ export default function CameraScreen() {
           </View>
           <View style={styles.hint}>
             <AppText variant="caption" color="#FFFFFF" style={styles.bold}>
-              {ready ? 'Fit the page inside the frame' : 'Starting camera…'}
+              {ready ? captureHint(captureMode, pages.length) : 'Starting camera…'}
             </AppText>
           </View>
         </View>
@@ -274,6 +301,41 @@ export default function CameraScreen() {
 
       {/* Bottom controls */}
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 18 }]}>
+        {!single ? (
+          <ScrollView
+            ref={modeBar}
+            horizontal
+            onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.modes}
+            style={styles.modesWrap}
+            accessibilityRole="tablist"
+          >
+            {SCAN_MODES.map((m) => {
+              const active = m.id === captureMode;
+              const locked = pages.length > 0 && !active;
+              return (
+                <Pressable
+                  key={m.id}
+                  onPress={() => setCaptureMode(m.id)}
+                  onLayout={(e) => {
+                    modeX.current[m.id] = { x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width };
+                    if (m.id === captureMode && barWidth) modeBar.current?.scrollTo({ x: Math.max(0, e.nativeEvent.layout.x + e.nativeEvent.layout.width / 2 - barWidth / 2), animated: false });
+                  }}
+                  disabled={locked}
+                  accessibilityRole="tab"
+                  accessibilityLabel={`${m.label} mode`}
+                  accessibilityState={{ selected: active, disabled: locked }}
+                  style={[styles.modeChip, active && styles.modeChipActive, { opacity: locked ? 0.35 : 1 }]}
+                >
+                  <AppText variant="caption" color={active ? INK : '#E5E7EB'} style={styles.modeText}>
+                    {m.label}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        ) : null}
         <View style={styles.controls}>
           <Pressable onPress={() => void fromGallery()} accessibilityRole="button" accessibilityLabel="Add from photos" style={styles.side}>
             <View style={styles.sideIcon}>
@@ -341,12 +403,18 @@ const styles = StyleSheet.create({
   gridV: { position: 'absolute', top: 0, bottom: 0, width: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.45)' },
   gridH: { position: 'absolute', left: 0, right: 0, height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(255,255,255,0.45)' },
   guideWrap: { alignItems: 'center', justifyContent: 'center', paddingTop: 70 },
-  guide: { width: '80%', aspectRatio: 0.72 },
+  guide: {},
   corner: { position: 'absolute', width: C, height: C, borderColor: '#5EEAD4' },
   tl: { top: 0, left: 0, borderTopWidth: 4, borderLeftWidth: 4, borderTopLeftRadius: 12 },
   tr: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 12 },
   bl: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 12 },
   br: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 12 },
+  spine: { position: 'absolute', top: '6%', bottom: '6%', left: '50%', width: 2, marginLeft: -1, backgroundColor: 'rgba(94,234,212,0.7)' },
+  modesWrap: { flexGrow: 0, marginBottom: 16 },
+  modes: { paddingHorizontal: 16, gap: 6, alignItems: 'center', flexGrow: 1, justifyContent: 'center' },
+  modeChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999 },
+  modeChipActive: { backgroundColor: '#FFFFFF' },
+  modeText: { fontWeight: '600', fontSize: 13 },
   hint: { marginTop: 18, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999 },
   flash: { backgroundColor: '#FFFFFF' },
   bottom: { backgroundColor: INK, paddingTop: 18 },

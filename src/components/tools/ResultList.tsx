@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Alert, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { DocumentThumbnail } from '@/components/documents/DocumentThumbnail';
 import { documentMeta } from '@/components/documents/documentLabels';
@@ -8,6 +8,7 @@ import { shareDocument } from '@/services/share/shareService';
 import { useAppTheme } from '@/theme';
 import type { ScanDocument } from '@/types/document';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 /** Created documents with Open / Share actions, shown after a tool finishes. */
 export function ResultList({ title, docs }: { title: string; docs: ScanDocument[] }) {
@@ -33,7 +34,7 @@ export function ResultList({ title, docs }: { title: string; docs: ScanDocument[
               {documentMeta(doc)}
             </AppText>
           </View>
-          <IconButton icon="share-outline" label={`Share ${doc.name}`} onPress={() => shareDocument(doc).catch((e) => Alert.alert('Could not share', errorMessage(e)))} />
+          <IconButton icon="share-outline" label={`Share ${doc.name}`} onPress={() => shareDocument(doc).catch((e) => appAlert('Could not share', errorMessage(e)))} />
           <IconButton icon="open-outline" label={`Open ${doc.name}`} onPress={() => router.push({ pathname: '/document/[id]', params: { id: doc.id } })} />
         </Card>
       ))}

@@ -4,6 +4,7 @@
  * Nothing is sent to any server.
  */
 import { Directory, File } from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { saveDocumentText } from '@/db/textRepository';
 import { getOcrProvider, type OcrLanguage, type RecognisedPage } from '@/native/ocr';
@@ -68,15 +69,50 @@ export async function recogniseDocument(
   }
 }
 
+/** Long edge for photo OCR: plenty for ML Kit, small enough to avoid memory errors on 50 MP photos. */
+const PHOTO_MAX_EDGE = 2600;
+
+/**
+ * Re-encodes a gallery/camera photo as an upright JPEG of bounded size. This
+ * applies EXIF rotation, converts HEIC/WebP, and resolves content:// URIs —
+ * the main reasons text recognition failed or returned nothing on photos.
+ */
+async function normalisePhoto(uri: string, dir: Directory): Promise<string> {
+  const probe = await ImageManipulator.manipulate(uri).renderAsync();
+  const long = Math.max(probe.width, probe.height);
+  const ctx = ImageManipulator.manipulate(uri);
+  if (long > PHOTO_MAX_EDGE) ctx.resize(probe.width >= probe.height ? { width: PHOTO_MAX_EDGE } : { height: PHOTO_MAX_EDGE });
+  const saved = await (await ctx.renderAsync()).saveAsync({ format: SaveFormat.JPEG, compress: 0.92 });
+  const target = new File(dir, `${createId()}.jpg`);
+  await new File(saved.uri).move(target);
+  return target.uri;
+}
+
 export async function recogniseImages(uris: readonly string[], language: OcrLanguage, options: { onProgress?: Progress; cancelToken?: CancelToken } = {}): Promise<OcrRun> {
   const provider = requireProvider();
-  const pages: RecognisedPage[] = [];
-  for (let i = 0; i < uris.length; i += 1) {
-    if (options.cancelToken?.cancelled) throw new CancelledError();
-    pages.push(await provider.recognise(uris[i], language));
-    options.onProgress?.(i + 1, uris.length);
+  const dir = new Directory(tempDir(), `ocr-${createId()}`);
+  dir.create({ intermediates: true, idempotent: true });
+  try {
+    const pages: RecognisedPage[] = [];
+    for (let i = 0; i < uris.length; i += 1) {
+      if (options.cancelToken?.cancelled) throw new CancelledError();
+      let source = uris[i];
+      try {
+        source = await normalisePhoto(uris[i], dir);
+      } catch {
+        // Fall back to the original file; ML Kit can read most JPEGs directly.
+      }
+      pages.push(await provider.recognise(source, language));
+      options.onProgress?.(i + 1, uris.length);
+    }
+    return { pages };
+  } finally {
+    try {
+      if (dir.exists) dir.delete();
+    } catch {
+      // Temp is wiped on next launch.
+    }
   }
-  return { pages };
 }
 
 /** Counts case-insensitive matches of `query` per page. */

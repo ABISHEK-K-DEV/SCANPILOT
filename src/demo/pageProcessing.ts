@@ -24,3 +24,6 @@ export async function autoCropPage(page: ScanPage): Promise<ScanPage> {
 export async function filterPreviews(uri: string, filters: readonly string[]): Promise<Record<string, string>> {
   return Object.fromEntries(filters.map((f) => [f, uri]));
 }
+export async function splitSpread(page: ScanPage): Promise<[ScanPage, ScanPage]> {
+  return [page, { ...page, id: `${page.id}-r` }];
+}

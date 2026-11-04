@@ -1,12 +1,13 @@
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+
 
 import { ChoiceRow, Field, Input } from '@/components/tools/FormBits';
 import { Button, ProgressOverlay, Screen } from '@/components/ui';
 import { createTextPdf, type TextStyle } from '@/services/tools/textToPdf';
 import { useAppTheme } from '@/theme';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 export default function TextToPdfScreen() {
   const { spacing } = useAppTheme();
@@ -22,7 +23,7 @@ export default function TextToPdfScreen() {
       const doc = await createTextPdf(title, body, style, size);
       router.replace({ pathname: '/document/[id]', params: { id: doc.id } });
     } catch (error) {
-      Alert.alert('Could not create PDF', errorMessage(error));
+      appAlert('Could not create PDF', errorMessage(error));
     } finally {
       setBusy(false);
     }

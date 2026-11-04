@@ -1,6 +1,6 @@
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
 import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
@@ -15,6 +15,7 @@ import { planSplit, splitDocument, type SplitMode } from '@/services/tools/split
 import { useAppTheme } from '@/theme';
 import type { ScanDocument } from '@/types/document';
 import { errorMessage, isCancelled } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 type Kind = SplitMode['kind'];
 
@@ -22,7 +23,8 @@ export default function SplitScreen() {
   const { colors, spacing, radius, typography } = useAppTheme();
   const { doc, loading, choose } = useSelectedDocument();
   const [picker, setPicker] = useState(false);
-  const [kind, setKind] = useState<Kind>('ranges');
+  const { mode: initialMode } = useLocalSearchParams<{ mode?: string }>();
+  const [kind, setKind] = useState<Kind>(initialMode === 'extract' ? 'extract' : 'ranges');
   const [expression, setExpression] = useState('');
   const [pageCount, setPageCount] = useState<number | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -34,7 +36,7 @@ export default function SplitScreen() {
     let active = true;
     loadPageCount(doc)
       .then((count) => active && setPageCount(count))
-      .catch((error: unknown) => active && Alert.alert('Could not read this PDF', errorMessage(error)));
+      .catch((error: unknown) => active && appAlert('Could not read this PDF', errorMessage(error)));
     return () => {
       active = false;
     };
@@ -58,7 +60,7 @@ export default function SplitScreen() {
     try {
       setResults(await splitDocument(doc, mode, { cancelToken: token.current, onProgress: (d, t) => setProgress(d / t) }));
     } catch (error) {
-      if (!isCancelled(error)) Alert.alert('Could not split', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Could not split', errorMessage(error));
     } finally {
       setProgress(null);
     }

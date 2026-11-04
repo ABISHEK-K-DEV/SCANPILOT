@@ -163,6 +163,43 @@ export async function imagesToPdf(images: readonly ImageInput[], options: Images
   return save(doc);
 }
 
+const ID1: [number, number] = [85.6 * MM, 53.98 * MM];
+
+/**
+ * ID card copy: front and back of a card (each JPEG/PNG, landscape) printed at
+ * true size (ID-1, 85.6 × 54 mm) one above the other on a single A4 page —
+ * the layout offices ask for when they want "a copy of both sides".
+ */
+export async function idCardSheetPdf(sides: readonly ImageInput[], options: { title?: string; labels?: boolean } = {}): Promise<Uint8Array> {
+  if (sides.length === 0 || sides.length > 2) throw new UserFacingError('Capture the front and, optionally, the back of the card.');
+  const doc = await PDFDocument.create();
+  stampMetadata(doc, options.title);
+  doc.setCreationDate(new Date());
+  const page = doc.addPage(A4);
+  const [pw, ph] = A4;
+  const gap = 18 * MM;
+  const total = sides.length * ID1[1] + (sides.length - 1) * gap;
+  let top = (ph + total) / 2;
+  const font = options.labels === false ? null : await doc.embedFont(StandardFonts.Helvetica);
+  for (let i = 0; i < sides.length; i += 1) {
+    const { bytes } = sides[i];
+    const type = sides[i].mimeType ?? detectImageType(bytes);
+    if (type === null) throw new UserFacingError(`Side ${i + 1} is not a JPEG or PNG.`);
+    const image = type === 'image/png' ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+    // Cards are landscape; turn a portrait capture to fill the card outline.
+    const rotate = image.height > image.width;
+    const [w, h] = ID1;
+    const x = (pw - w) / 2;
+    const y = top - h;
+    if (rotate) page.drawImage(image, { x: x + w, y, width: h, height: w, rotate: degrees(90) });
+    else page.drawImage(image, { x, y, width: w, height: h });
+    page.drawRectangle({ x, y, width: w, height: h, borderColor: rgb(0.8, 0.82, 0.86), borderWidth: 0.5 });
+    if (font) page.drawText(i === 0 ? 'Front' : 'Back', { x, y: top + 4, size: 8, font, color: rgb(0.45, 0.48, 0.55) });
+    top = y - gap;
+  }
+  return save(doc);
+}
+
 /** Merges documents in the given order. */
 export async function mergePdfs(inputs: readonly Uint8Array[], options: OperationOptions & { title?: string } = {}): Promise<Uint8Array> {
   if (inputs.length < 2) throw new UserFacingError('Select at least two PDFs to merge.');

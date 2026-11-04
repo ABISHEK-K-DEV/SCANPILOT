@@ -11,7 +11,7 @@ import { View } from 'react-native';
 
 import { BootScreen } from '@/components/brand/BootScreen';
 import { LockScreen, useAppLockWatcher } from '@/components/security/LockScreen';
-import { ErrorState } from '@/components/ui';
+import { DialogHost, ErrorState } from '@/components/ui';
 import { getDatabase } from '@/db/database';
 import { initialiseStorage } from '@/services/storage/fileStore';
 import { useSecurityStore } from '@/stores/securityStore';
@@ -122,6 +122,7 @@ export default function RootLayout() {
           <Stack.Screen name="tool/rotate" options={{ title: 'Rotate PDF' }} />
           <Stack.Screen name="tool/crop" options={{ title: 'Crop PDF' }} />
           <Stack.Screen name="tool/ocr" options={{ title: 'Extract text' }} />
+          <Stack.Screen name="tool/pdf-to-office" options={{ title: 'Convert PDF' }} />
           <Stack.Screen name="tool/pdf-to-images" options={{ title: 'PDF to JPG' }} />
           <Stack.Screen name="tool/text-to-pdf" options={{ title: 'Text to PDF' }} />
           <Stack.Screen name="scan/camera" options={{ headerShown: false, animation: 'fade', gestureEnabled: false }} />
@@ -138,6 +139,7 @@ export default function RootLayout() {
         </Stack.Protected>
       </Stack>
       {appLock && locked ? <LockScreen /> : null}
+      <DialogHost />
     </ThemeProvider>
   );
 }

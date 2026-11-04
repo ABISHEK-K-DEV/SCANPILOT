@@ -1,6 +1,6 @@
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { ActionSheet, Button, EmptyState, ErrorState, IconButton, ListGroup, ListRow, LoadingState, Screen, TextPromptModal } from '@/components/ui';
 import { useFolders } from '@/hooks/useLibraryQueries';
@@ -8,6 +8,7 @@ import { createFolder, deleteFolder, renameFolder } from '@/services/library/fol
 import { useAppTheme } from '@/theme';
 import type { FolderWithCount } from '@/types/document';
 import { errorMessage } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 type Mode = { kind: 'create' } | { kind: 'menu'; folder: FolderWithCount } | { kind: 'rename'; folder: FolderWithCount } | null;
 
@@ -17,9 +18,9 @@ export default function FoldersScreen() {
   const [mode, setMode] = useState<Mode>(null);
 
   const confirmDelete = (folder: FolderWithCount) =>
-    Alert.alert('Delete folder?', `"${folder.name}" will be removed. Its ${folder.documentCount} document(s) are kept.`, [
+    appAlert('Delete folder?', `"${folder.name}" will be removed. Its ${folder.documentCount} document(s) are kept.`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete folder', style: 'destructive', onPress: () => deleteFolder(folder.id).catch((e) => Alert.alert('Could not delete', errorMessage(e))) },
+      { text: 'Delete folder', style: 'destructive', onPress: () => deleteFolder(folder.id).catch((e) => appAlert('Could not delete', errorMessage(e))) },
     ]);
 
   let body;

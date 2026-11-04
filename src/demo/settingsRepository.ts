@@ -24,6 +24,15 @@ export async function loadSettings(): Promise<AppSettings> {
       })),
     );
     session.select(params.get('page') ?? 'p1');
+    if (params.get('scanmode') === 'business-card') {
+      session.start();
+      session.setMode('business-card', 'business-card', 'Business card');
+      session.add([{ id: 'c1', uri: '/demo-assets/doc-card/page-1.png', originalUri: '/demo-assets/doc-card/page-1.png', width: 1240, height: 800, originalWidth: 1240, originalHeight: 800 }]);
+    }
+    if (params.get('scanmode') === 'id-card') {
+      session.setMode('id-card', 'a4', 'ID card');
+      session.remove('p3');
+    }
   }
   return {
     ...DEFAULT_SETTINGS,

@@ -6,15 +6,23 @@ import { Wordmark } from '@/components/brand/Logo';
 import { DocumentGridItem } from '@/components/documents/DocumentItems';
 import { FolderTile } from '@/components/documents/FolderTile';
 import { ToolTile } from '@/components/documents/ToolTile';
-import { AppText, EmptyState, ErrorState, Icon, type IconName, Screen, SectionHeader } from '@/components/ui';
+import { AppText, DocumentSkeletonRow, EmptyState, ErrorState, Icon, type IconName, Screen, SectionHeader } from '@/components/ui';
 import { POPULAR, tool, type ToolId } from '@/features/tools';
 import { useDocumentActions } from '@/hooks/useDocumentActions';
 import { useToolLauncher } from '@/hooks/useToolLauncher';
 import { useDocuments, useFolders } from '@/hooks/useLibraryQueries';
 import { elevation, useAppTheme } from '@/theme';
+import type { ScanMode } from '@/services/scan/modes';
 import type { ScanDocument } from '@/types/document';
 
 const MAX_WIDTH = 820;
+
+const HERO_MODES: { mode: ScanMode; label: string; icon: IconName }[] = [
+  { mode: 'id-card', label: 'ID card', icon: 'id-card' },
+  { mode: 'business-card', label: 'Card', icon: 'contact' },
+  { mode: 'whiteboard', label: 'Board', icon: 'whiteboard' },
+  { mode: 'book', label: 'Book', icon: 'book' },
+];
 
 /** Decorative stacked pages inside scan-frame corners, top-right of the hero card. */
 function HeroArt() {
@@ -168,6 +176,22 @@ export default function HomeScreen() {
             Start scanning
           </AppText>
         </Pressable>
+        <View style={[styles.modeRow, { marginTop: spacing.md, gap: spacing.sm }]}>
+          {HERO_MODES.map((m) => (
+            <Pressable
+              key={m.mode}
+              onPress={() => scanner.startScan(null, m.mode)}
+              accessibilityRole="button"
+              accessibilityLabel={`Scan ${m.label}`}
+              style={({ pressed }) => [styles.modeButton, { borderRadius: radius.md, backgroundColor: pressed ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.08)' }]}
+            >
+              <Icon name={m.icon} size={18} color="#FFFFFF" />
+              <AppText variant="caption" color={colors.onInk} numberOfLines={1} style={styles.modeLabel}>
+                {m.label}
+              </AppText>
+            </Pressable>
+          ))}
+        </View>
       </View>
 
       <View style={[styles.row, { gap: spacing.md, marginTop: spacing.md }]}>
@@ -197,7 +221,9 @@ export default function HomeScreen() {
         />
       ) : recent.data ? (
         <HorizontalDocuments docs={recent.data} onMore={actions.show} />
-      ) : null}
+      ) : (
+        <DocumentSkeletonRow count={2} />
+      )}
 
       {favourites.data && favourites.data.length > 0 ? (
         <>
@@ -235,6 +261,9 @@ const styles = StyleSheet.create({
   eyebrow: { letterSpacing: 1.2, fontSize: 10.5 },
   scanButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 50, alignSelf: 'stretch' },
   row: { flexDirection: 'row' },
+  modeRow: { flexDirection: 'row' },
+  modeButton: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, gap: 4 },
+  modeLabel: { fontWeight: '600', fontSize: 12 },
   quick: { flex: 1, borderWidth: StyleSheet.hairlineWidth },
   quickTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   quickIcon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },

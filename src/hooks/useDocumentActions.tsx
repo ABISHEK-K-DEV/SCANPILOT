@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+
 
 import { ActionSheet, type SheetAction, TextPromptModal } from '@/components/ui';
 import { listFolders } from '@/db/foldersRepository';
@@ -18,6 +18,7 @@ import { canSaveToDevice, saveToDevice, shareDocument } from '@/services/share/s
 import type { FolderWithCount, ScanDocument } from '@/types/document';
 import { errorMessage } from '@/utils/errors';
 import { formatBytes, formatPageCount } from '@/utils/format';
+import { appAlert, toast } from '@/stores/dialogStore';
 
 /** Creation tools don't take an existing document. */
 const DOC_TOOL_EXCLUDE: ToolId[] = ['text-to-pdf'];
@@ -25,12 +26,12 @@ const DOC_TOOL_EXCLUDE: ToolId[] = ['text-to-pdf'];
 type Mode = { kind: 'menu' } | { kind: 'tools' } | { kind: 'rename' } | { kind: 'move'; folders: FolderWithCount[] } | { kind: 'new-folder' };
 
 function report(title: string) {
-  return (error: unknown) => Alert.alert(title, errorMessage(error));
+  return (error: unknown) => appAlert(title, errorMessage(error));
 }
 
 /** Confirmation used everywhere a document can be deleted. */
 export function confirmDelete(doc: ScanDocument, onDeleted?: () => void) {
-  Alert.alert('Delete document?', `"${doc.name}" will be permanently removed from this device.`, [
+  appAlert('Delete document?', `"${doc.name}" will be permanently removed from this device.`, [
     { text: 'Cancel', style: 'cancel' },
     {
       text: 'Delete',
@@ -88,7 +89,7 @@ export function useDocumentActions(options: { onDeleted?: () => void; hideOpen?:
             hint: 'Choose a folder on your phone',
             onPress: () =>
               saveToDevice(target)
-                .then((saved) => saved && Alert.alert('Saved', `"${target.name}.pdf" was saved to the folder you chose.`))
+                .then((saved) => saved && toast(`Saved "${target.name}.pdf"`))
                 .catch(report('Could not save')),
           },
         ]

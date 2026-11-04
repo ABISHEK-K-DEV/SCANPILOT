@@ -99,6 +99,8 @@ const shots = [
     await p.getByLabel('Page 1', { exact: true }).click();
     await p.getByLabel('Delete', { exact: true }).click();
     await p.waitForTimeout(300);
+    await p.getByRole('alert').getByLabel('Delete', { exact: true }).click(); // in-app confirmation
+    await p.waitForTimeout(300);
     await p.getByLabel('Page 3', { exact: true }).click();
     await p.getByLabel('Left', { exact: true }).click();
     await p.getByLabel('Save changes').click();
@@ -185,6 +187,22 @@ const shots = [
     await p.getByLabel('Take photo').click();
     await p.waitForTimeout(700);
   }],
+  ['57-camera-id-card', '/scan/camera?scanMode=id-card'],
+  ['58-camera-book', '/scan/camera?scanMode=book'],
+  ['59-camera-whiteboard', '/scan/camera?scanMode=whiteboard'],
+  ['60-review-business-card', '/scan/review?scanmode=business-card', async (p) => {
+    await p.getByLabel('Contact', { exact: true }).click();
+    await p.waitForTimeout(600);
+  }],
+  ['61-review-id-card', '/scan/review?scanmode=id-card'],
+  ['62-delete-dialog', '/scan/review', async (p) => {
+    await p.getByLabel('Delete', { exact: true }).click();
+    await p.waitForTimeout(400);
+  }],
+  ['63-pdf-to-ppt', '/tool/pdf-to-office?format=pptx&id=doc-lease'],
+  ['64-pdf-to-excel', '/tool/pdf-to-office?format=xlsx'],
+  ['65-ocr-camera', '/tool/ocr'],
+  ['66-tools-scan-modes', '/tools', async (p) => p.mouse.wheel(0, 300)],
   ['25-crop-editor', '/scan/crop?id=p3', dragCornersOntoPaper],
   ['26-crop-editor-dark', '/scan/crop?id=p3&theme=dark', dragCornersOntoPaper],
 ];

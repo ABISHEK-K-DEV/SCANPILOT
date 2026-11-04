@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Alert } from 'react-native';
+
 
 import { ProgressOverlay } from '@/components/ui';
 import { ScannerError } from '@/native/scanner';
@@ -14,6 +14,7 @@ import type { ScanPage } from '@/services/scan/types';
 import type { ScanDocument } from '@/types/document';
 import { errorMessage, isCancelled } from '@/utils/errors';
 import { timestampedName } from '@/utils/filename';
+import { appAlert } from '@/stores/dialogStore';
 
 export type DocumentSource = 'scan' | 'import' | 'photos';
 
@@ -48,7 +49,7 @@ export function useDocumentSources(folderId: string | null = null) {
       const doc = await importImagesAsPdf(callbacks('Creating PDF from photos'));
       return doc ? [doc] : null;
     } catch (error) {
-      if (!isCancelled(error)) Alert.alert('Could not create PDF', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Could not create PDF', errorMessage(error));
       return null;
     } finally {
       setBusy(null);
@@ -60,14 +61,14 @@ export function useDocumentSources(folderId: string | null = null) {
       const result = await importPdfs(callbacks('Importing PDFs'));
       if (!result) return null;
       if (result.failed.length > 0) {
-        Alert.alert(
+        appAlert(
           result.imported.length > 0 ? 'Some files were not imported' : 'Import failed',
           result.failed.map((f) => `• ${f.name}: ${f.reason}`).join('\n'),
         );
       }
       return result.imported.length > 0 ? result.imported : null;
     } catch (error) {
-      if (!isCancelled(error)) Alert.alert('Import failed', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Import failed', errorMessage(error));
       return null;
     } finally {
       setBusy(null);
@@ -112,13 +113,13 @@ export function useDocumentSources(folderId: string | null = null) {
       if (error instanceof ScannerError && error.reason === 'unavailable') {
         setBusy(null);
         return new Promise((resolve) => {
-          Alert.alert('Scanner unavailable', error.message, [
+          appAlert('Scanner unavailable', error.message, [
             { text: 'Cancel', style: 'cancel', onPress: () => resolve(null) },
             { text: 'Choose photos', onPress: () => void fromPhotos().then(resolve) },
           ]);
         });
       }
-      Alert.alert('Scan failed', errorMessage(error));
+      appAlert('Scan failed', errorMessage(error));
       return null;
     } finally {
       setBusy(null);

@@ -3,7 +3,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { launchImageLibraryAsync } from 'expo-image-picker';
 import { router, Stack, usePreventRemove } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
@@ -24,6 +24,7 @@ import { errorMessage } from '@/utils/errors';
 import { PageCanvas } from './PageCanvas';
 import { INK_COLORS, SignaturePad } from './SignaturePad';
 import { rgbCss, strokePath } from './svgPaths';
+import { appAlert } from '@/stores/dialogStore';
 
 export type EditorMode = 'sign' | 'edit' | 'redact';
 
@@ -116,7 +117,7 @@ export function PdfEditor({ mode }: { mode: EditorMode }) {
   }, [page, pages.pageCount]);
 
   const disablePrevention = usePreventRemove(dirty && busy === null, ({ repeat }) => {
-    Alert.alert('Discard changes?', 'Your edits have not been saved.', [
+    appAlert('Discard changes?', 'Your edits have not been saved.', [
       { text: 'Keep editing', style: 'cancel' },
       { text: 'Discard', style: 'destructive', onPress: repeat },
     ]);
@@ -173,7 +174,7 @@ export function PdfEditor({ mode }: { mode: EditorMode }) {
       return;
     }
     if (t === 'image') {
-      void addImage().catch((e: unknown) => Alert.alert('Could not add image', errorMessage(e)));
+      void addImage().catch((e: unknown) => appAlert('Could not add image', errorMessage(e)));
       return;
     }
     setTool(t);
@@ -189,7 +190,7 @@ export function PdfEditor({ mode }: { mode: EditorMode }) {
       disablePrevention();
       router.replace({ pathname: '/document/[id]', params: { id: created.id } });
     } catch (error) {
-      Alert.alert('Could not save', errorMessage(error));
+      appAlert('Could not save', errorMessage(error));
     } finally {
       setBusy(null);
     }
@@ -340,7 +341,7 @@ export function PdfEditor({ mode }: { mode: EditorMode }) {
                   placeSignature(sig);
                 }}
                 onLongPress={() =>
-                  Alert.alert('Delete this signature?', 'It is stored only on this device.', [
+                  appAlert('Delete this signature?', 'It is stored only on this device.', [
                     { text: 'Cancel', style: 'cancel' },
                     { text: 'Delete', style: 'destructive', onPress: () => void removeSignature(sig.id).then(setSaved) },
                   ])

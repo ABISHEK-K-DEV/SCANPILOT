@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
 
 import { LogoMark } from '@/components/brand/Logo';
 import { ActionSheet, AppText, Icon, ListGroup, ListRow, Screen } from '@/components/ui';
@@ -14,6 +14,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { elevation, useAppTheme } from '@/theme';
 import type { ThemePreference } from '@/types/settings';
 import { formatBytes } from '@/utils/format';
+import { appAlert, toast } from '@/stores/dialogStore';
 
 const THEME_LABEL: Record<ThemePreference, string> = { system: 'Match device', light: 'Light', dark: 'Dark' };
 
@@ -40,12 +41,12 @@ export default function SettingsScreen() {
   const clearTemporary = () => {
     clearTemp();
     setUsage(storageUsage());
-    Alert.alert('Temporary files cleared', 'Your documents were not affected.');
+    toast('Temporary files cleared');
   };
 
   const toggleAppLock = async (enable: boolean) => {
     if (enable && !(await canAuthenticate())) {
-      Alert.alert('Set up a screen lock first', 'App lock uses your fingerprint, face or device PIN. Add one in your phone settings.');
+      appAlert('Set up a screen lock first', 'App lock uses your fingerprint, face or device PIN. Add one in your phone settings.');
       return;
     }
     if (await authenticate(enable ? 'Turn on app lock' : 'Turn off app lock')) await update('appLock', enable);
@@ -53,7 +54,7 @@ export default function SettingsScreen() {
 
   const openLockedFolder = async () => {
     if (!(await canAuthenticate())) {
-      Alert.alert('Set up a screen lock first', 'The locked folder uses your fingerprint, face or device PIN. Add one in your phone settings.');
+      appAlert('Set up a screen lock first', 'The locked folder uses your fingerprint, face or device PIN. Add one in your phone settings.');
       return;
     }
     if (!(await authenticate('Open the locked folder'))) return;

@@ -53,8 +53,8 @@ export function ToolTile({ icon, label, description, category, onPress, comingSo
         styles.tile,
         {
           width,
-          padding: spacing.md + 2,
-          gap: spacing.md,
+          padding: spacing.md,
+          gap: spacing.sm + 2,
           borderRadius: radius.lg,
           borderColor: colors.border,
           backgroundColor: pressed ? colors.surfacePressed : colors.surface,
@@ -64,8 +64,8 @@ export function ToolTile({ icon, label, description, category, onPress, comingSo
       ]}
     >
       <View style={styles.top}>
-        <View style={[styles.icon, { backgroundColor: bg, borderRadius: radius.md }]}>
-          <Icon name={icon} size={20} color={fg} />
+        <View style={[styles.icon, { backgroundColor: bg, borderRadius: radius.md - 2 }]}>
+          <Icon name={icon} size={18} color={fg} />
         </View>
         {comingSoon ? <Badge label="Soon" /> : null}
       </View>
@@ -74,7 +74,7 @@ export function ToolTile({ icon, label, description, category, onPress, comingSo
           {label}
         </AppText>
         {description ? (
-          <AppText variant="caption" tone="muted" numberOfLines={2}>
+          <AppText variant="caption" tone="muted" numberOfLines={1}>
             {description}
           </AppText>
         ) : null}
@@ -84,11 +84,11 @@ export function ToolTile({ icon, label, description, category, onPress, comingSo
 }
 
 const styles = StyleSheet.create({
-  tile: { borderWidth: StyleSheet.hairlineWidth, minHeight: 124 },
+  tile: { borderWidth: StyleSheet.hairlineWidth },
   compact: { alignItems: 'center', paddingVertical: 6 },
   compactIcon: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
   compactLabel: { fontWeight: '500', fontSize: 12.5, lineHeight: 16 },
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  icon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   text: { gap: 2 },
 });

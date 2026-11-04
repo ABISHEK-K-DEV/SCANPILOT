@@ -1,9 +1,10 @@
 import { Image } from 'expo-image';
 import { router, Stack, usePreventRemove } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BusinessCardPanel } from '@/components/scan/BusinessCardPanel';
 import { FilterStrip } from '@/components/scan/FilterStrip';
 import { PageThumb } from '@/components/scan/PageThumb';
 import { ToolbarButton } from '@/components/scan/ToolbarButton';
@@ -27,11 +28,12 @@ import { PRESETS } from '@/services/scan/types';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { useAppTheme } from '@/theme';
 import { errorMessage, isCancelled } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 type Sheet = 'add' | 'rename' | null;
-type Panel = 'edit' | 'filters' | 'size';
+type Panel = 'edit' | 'filters' | 'size' | 'contact';
 
-const PANELS: { id: Panel; label: string; icon: 'crop-outline' | 'color-wand-outline' | 'document-text-outline' }[] = [
+const PANELS: { id: Panel; label: string; icon: 'crop-outline' | 'color-wand-outline' | 'document-text-outline' | 'contact' }[] = [
   { id: 'edit', label: 'Edit', icon: 'crop-outline' },
   { id: 'filters', label: 'Filter', icon: 'color-wand-outline' },
   { id: 'size', label: 'Page size', icon: 'document-text-outline' },
@@ -39,7 +41,9 @@ const PANELS: { id: Panel; label: string; icon: 'crop-outline' | 'color-wand-out
 
 export default function ScanReviewScreen() {
   const { colors, radius, spacing } = useAppTheme();
-  const { pages, selectedId, preset, name, folderId, select, remove, move, update, setPreset, setName, clear } = useScanSession();
+  const { pages, selectedId, preset, name, folderId, mode, select, remove, move, update, setPreset, setName, clear } = useScanSession();
+  const idSheet = mode === 'id-card' && pages.length <= 2;
+  const panels = mode === 'business-card' ? [...PANELS, { id: 'contact' as const, label: 'Contact', icon: 'contact' as const }] : PANELS;
   const flow = useScanFlow();
   const [sheet, setSheet] = useState<Sheet>(null);
   const [panel, setPanel] = useState<Panel>('edit');
@@ -51,7 +55,7 @@ export default function ScanReviewScreen() {
   const page = pages[index] ?? null;
 
   const disablePrevention = usePreventRemove(pages.length > 0, ({ repeat }) => {
-    Alert.alert('Discard this scan?', `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} will be deleted.`, [
+    appAlert('Discard this scan?', `${pages.length} ${pages.length === 1 ? 'page' : 'pages'} will be deleted.`, [
       { text: 'Keep editing', style: 'cancel' },
       {
         text: 'Discard',
@@ -69,7 +73,7 @@ export default function ScanReviewScreen() {
     try {
       await task();
     } catch (error) {
-      Alert.alert('Something went wrong', errorMessage(error));
+      appAlert('Something went wrong', errorMessage(error));
     } finally {
       setBusy(null);
     }
@@ -106,7 +110,7 @@ export default function ScanReviewScreen() {
 
   const confirmDelete = () => {
     if (!page) return;
-    Alert.alert('Delete page?', `Page ${index + 1} will be removed from this scan.`, [
+    appAlert('Delete page?', `Page ${index + 1} will be removed from this scan.`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => remove(page.id) },
     ]);
@@ -118,6 +122,7 @@ export default function ScanReviewScreen() {
     setSaving({ completed: 0, total: pages.length + 1 });
     try {
       const doc = await savePagesAsPdf(pages, {
+        layout: idSheet ? 'id-card-sheet' : 'pages',
         name: await availableName(name || 'Scan'),
         preset,
         folderId,
@@ -130,7 +135,7 @@ export default function ScanReviewScreen() {
       router.replace({ pathname: '/document/[id]', params: { id: doc.id } });
     } catch (error) {
       setSaving(null);
-      if (!isCancelled(error)) Alert.alert('Could not save PDF', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Could not save PDF', errorMessage(error));
     }
   };
 
@@ -188,6 +193,14 @@ export default function ScanReviewScreen() {
         <Icon name="create-outline" size={17} color={colors.textSubtle} />
       </Pressable>
 
+      {idSheet ? (
+        <View style={[styles.notice, { marginHorizontal: spacing.lg, marginBottom: spacing.sm, backgroundColor: colors.primarySoft, borderRadius: radius.md, gap: spacing.sm }]}>
+          <Icon name="id-card" size={16} color={colors.primary} />
+          <AppText variant="caption" color={colors.primary} style={styles.flex}>
+            {pages.length === 2 ? 'Front and back are saved together on one A4 page at real card size.' : 'Add the back of the card to save both sides on one page.'}
+          </AppText>
+        </View>
+      ) : null}
       <View style={[styles.preview, { backgroundColor: colors.surfaceAlt, marginHorizontal: spacing.lg, borderRadius: radius.lg }]}>
         {page ? (
           <Image
@@ -239,7 +252,7 @@ export default function ScanReviewScreen() {
       </ScrollView>
 
       <View style={[styles.segment, { marginHorizontal: spacing.lg, marginTop: spacing.md, backgroundColor: colors.surfaceAlt, borderRadius: radius.md }]} accessibilityRole="tablist">
-        {PANELS.map((tab) => {
+        {panels.map((tab) => {
           const active = panel === tab.id;
           return (
             <Pressable
@@ -268,6 +281,8 @@ export default function ScanReviewScreen() {
             <ToolbarButton icon="camera-reverse-outline" label="Retake" onPress={() => page && void flow.capture({ replace: page.id })} />
             <ToolbarButton icon="trash-outline" label="Delete" destructive onPress={confirmDelete} />
           </View>
+        ) : panel === 'contact' && pages[0] ? (
+          <BusinessCardPanel imageUri={pages[0].uri} />
         ) : panel === 'filters' && page ? (
           <FilterStrip page={page} busy={busy !== null} onSelect={(f) => void setFilter(f)} onApplyToAll={() => void applyToAll(page.filter ?? 'original')} />
         ) : (
@@ -344,6 +359,7 @@ const styles = StyleSheet.create({
   addTile: { width: 64, height: 86, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addLabel: { fontSize: 10.5, lineHeight: 13 },
   segment: { flexDirection: 'row', padding: 3 },
+  notice: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
   segmentItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 38 },
   segmentShadow: { shadowColor: '#0F172A', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   segmentLabel: { fontWeight: '600' },

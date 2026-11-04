@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert } from 'react-native';
+
 
 import { ProgressOverlay } from '@/components/ui';
 import { type ImportCallbacks, importImagesAsPdf, importPdfs } from '@/services/import/importService';
 import { errorMessage, isCancelled } from '@/utils/errors';
+import { appAlert } from '@/stores/dialogStore';
 
 interface ProgressState {
   title: string;
@@ -36,7 +37,7 @@ export function useImportActions(folderId: string | null = null) {
       setProgress(null);
       if (!result) return;
       if (result.failed.length > 0) {
-        Alert.alert(
+        appAlert(
           result.imported.length > 0 ? 'Some files were not imported' : 'Import failed',
           result.failed.map((f) => `• ${f.name}: ${f.reason}`).join('\n'),
         );
@@ -46,7 +47,7 @@ export function useImportActions(folderId: string | null = null) {
       }
     } catch (error) {
       setProgress(null);
-      if (!isCancelled(error)) Alert.alert('Import failed', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Import failed', errorMessage(error));
     }
   };
 
@@ -57,7 +58,7 @@ export function useImportActions(folderId: string | null = null) {
       if (doc) router.push({ pathname: '/document/[id]', params: { id: doc.id } });
     } catch (error) {
       setProgress(null);
-      if (!isCancelled(error)) Alert.alert('Could not create PDF', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Could not create PDF', errorMessage(error));
     }
   };
 

@@ -1,13 +1,13 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router as mockRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Alert } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import HomeScreen from '@/app/(tabs)/index';
 import ScanReviewScreen from '@/app/scan/review';
 import { capturePages, savePagesAsPdf } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
+import { useDialogStore } from '@/stores/dialogStore';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { DEFAULT_SETTINGS } from '@/types/settings';
@@ -113,13 +113,13 @@ describe('scan review screen', () => {
   });
 
   it('deletes a page after confirmation', async () => {
-    const alert = jest.spyOn(Alert, 'alert').mockImplementation((_t, _m, buttons) => {
-      buttons?.find((b) => b.style === 'destructive')?.onPress?.();
-    });
     await render(<ScanReviewScreen />, { wrapper });
     await fireEvent.press(screen.getByLabelText('Delete'));
+    const dialog = useDialogStore.getState().queue[0];
+    expect(dialog.tone).toBe('danger');
+    dialog.buttons.find((b) => b.style === 'destructive')?.onPress?.();
     expect(useScanSession.getState().pages.map((p) => p.id)).toEqual(['b', 'c']);
-    alert.mockRestore();
+    useDialogStore.setState({ queue: [] });
   });
 
   it('rotates the selected page', async () => {

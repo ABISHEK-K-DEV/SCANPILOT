@@ -10,6 +10,7 @@ import {
   duplicatePage,
   extractPages,
   getPdfInfo,
+  idCardSheetPdf,
   imagesToPdf,
   isPdf,
   mergePdfs,
@@ -92,6 +93,22 @@ describe('imagesToPdf', () => {
 
   it('honours cancellation', async () => {
     await expect(imagesToPdf([{ bytes: PNG_1X1 }], { cancelToken: { cancelled: true } })).rejects.toBeInstanceOf(CancelledError);
+  });
+});
+
+describe('idCardSheetPdf', () => {
+  it('puts front and back on one A4 page', async () => {
+    const doc = await PDFDocument.load(await idCardSheetPdf([{ bytes: JPEG_2X1 }, { bytes: PNG_1X1 }], { title: 'ID card' }));
+    expect(doc.getPageCount()).toBe(1);
+    const { width, height } = doc.getPage(0).getSize();
+    expect(Math.round(width)).toBe(595);
+    expect(Math.round(height)).toBe(842);
+    expect(doc.getTitle()).toBe('ID card');
+  });
+
+  it('accepts only one or two sides', async () => {
+    await expect(idCardSheetPdf([])).rejects.toThrow(/front/);
+    await expect(idCardSheetPdf([{ bytes: JPEG_2X1 }, { bytes: JPEG_2X1 }, { bytes: JPEG_2X1 }])).rejects.toThrow(/front/);
   });
 });
 

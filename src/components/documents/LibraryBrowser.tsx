@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useDeferredValue, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { SourceButtons } from '@/components/tools/DocumentSources';
 
@@ -12,7 +12,7 @@ import {
   ErrorState,
   Icon,
   IconButton,
-  LoadingState,
+  DocumentSkeletonRow,
   SearchField,
   TextPromptModal,
 } from '@/components/ui';
@@ -54,6 +54,8 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
   const actions = useDocumentActions();
   const importer = useImportActions(folderId ?? null);
   const scanner = useScanFlow();
+  const { width: windowWidth } = useWindowDimensions();
+  const skeletonWidth = Math.floor((Math.min(windowWidth, 820) - spacing.lg * 2 - spacing.md) / 2);
   const showFolders = folderId === undefined && deferredSearch.trim().length === 0 && !favoritesOnly;
 
   const setSort = (value: SortOption) => void updateSetting('sort', value);
@@ -108,7 +110,7 @@ export function LibraryBrowser({ folderId, title, initialSearch = '', autoFocusS
 
   let empty;
   if (documents.error) empty = <ErrorState message={documents.error} onRetry={documents.refresh} />;
-  else if (!documents.data) empty = <LoadingState />;
+  else if (!documents.data) empty = <DocumentSkeletonRow count={4} width={skeletonWidth} />;
   else if (deferredSearch.trim()) empty = <EmptyState icon="search" title="No matches" message={`No documents match "${deferredSearch.trim()}".`} />;
   else if (favoritesOnly)
     empty = <EmptyState icon="star-outline" title="No favourites yet" message="Use a document's ⋮ menu to add it to your favourites." />;

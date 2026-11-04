@@ -15,6 +15,10 @@ export function useToolLauncher(folderId: string | null = null) {
 
   const launch = (id: ToolId, documentId?: string) => {
     if (id === 'scan') return scanner.startScan(folderId);
+    if (id === 'scan-whiteboard') return scanner.startScan(folderId, 'whiteboard');
+    if (id === 'scan-book') return scanner.startScan(folderId, 'book');
+    if (id === 'scan-id-card') return scanner.startScan(folderId, 'id-card');
+    if (id === 'scan-business-card') return scanner.startScan(folderId, 'business-card');
     if (id === 'import-pdf') return void importer.importPdf();
     if (id === 'import-images') return void importer.importImages();
     const def = tool(id);

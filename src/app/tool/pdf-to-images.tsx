@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { Stack } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
 import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
@@ -17,6 +17,7 @@ import { useAppTheme } from '@/theme';
 import { errorMessage, isCancelled } from '@/utils/errors';
 import { exportFileName } from '@/utils/filename';
 import { formatBytes } from '@/utils/format';
+import { appAlert, toast } from '@/stores/dialogStore';
 
 export default function PdfToImagesScreen() {
   const { spacing, radius, colors } = useAppTheme();
@@ -43,7 +44,7 @@ export default function PdfToImagesScreen() {
     try {
       setImages(await exportPagesAsImages(doc, quality, { cancelToken: token.current, onProgress: (d, t) => setProgress(d / t) }));
     } catch (error) {
-      if (!isCancelled(error)) Alert.alert('Could not convert', errorMessage(error));
+      if (!isCancelled(error)) appAlert('Could not convert', errorMessage(error));
     } finally {
       setProgress(null);
     }
@@ -89,8 +90,8 @@ export default function PdfToImagesScreen() {
                   icon="download-outline"
                   onPress={() =>
                     saveManyToDevice(images.map((i) => ({ name: i.name, bytes: i.bytes, mimeType: 'image/jpeg' })))
-                      .then((n) => n !== null && Alert.alert('Saved', `${n} images were saved to the folder you chose.`))
-                      .catch((e) => Alert.alert('Could not save', errorMessage(e)))
+                      .then((n) => n !== null && toast(`${n} images saved`))
+                      .catch((e) => appAlert('Could not save', errorMessage(e)))
                   }
                 />
               ) : null}
@@ -102,7 +103,7 @@ export default function PdfToImagesScreen() {
                   (images.length === 1
                     ? shareBytes(images[0].name, images[0].bytes, 'image/jpeg', 'public.jpeg')
                     : shareBytes(exportFileName(`${doc.name} images`, 'zip'), buildZip(images), 'application/zip', 'public.zip-archive')
-                  ).catch((e) => Alert.alert('Could not share', errorMessage(e)))
+                  ).catch((e) => appAlert('Could not share', errorMessage(e)))
                 }
               />
             </View>
