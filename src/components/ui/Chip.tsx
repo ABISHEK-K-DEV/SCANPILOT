@@ -15,7 +15,7 @@ interface ChipProps {
 
 export function Chip({ label, selected = false, icon, onPress, accessibilityLabel }: ChipProps) {
   const { colors, radius, spacing } = useAppTheme();
-  const fg = selected ? colors.primary : colors.textMuted;
+  const fg = selected ? colors.onPrimary : colors.textMuted;
   return (
     <Pressable
       onPress={onPress}
@@ -28,8 +28,8 @@ export function Chip({ label, selected = false, icon, onPress, accessibilityLabe
           borderRadius: radius.pill,
           paddingHorizontal: spacing.md,
           gap: spacing.xs,
-          backgroundColor: selected ? colors.primarySoft : pressed ? colors.surfacePressed : colors.surface,
-          borderColor: selected ? colors.primarySoft : colors.border,
+          backgroundColor: selected ? colors.primary : pressed ? colors.surfacePressed : colors.surface,
+          borderColor: selected ? colors.primary : colors.borderStrong,
         },
       ]}
     >
@@ -42,6 +42,6 @@ export function Chip({ label, selected = false, icon, onPress, accessibilityLabe
 }
 
 const styles = StyleSheet.create({
-  chip: { flexDirection: 'row', alignItems: 'center', minHeight: 36, borderWidth: StyleSheet.hairlineWidth },
+  chip: { flexDirection: 'row', alignItems: 'center', minHeight: 36, borderWidth: 1 },
   label: { fontWeight: '600' },
 });

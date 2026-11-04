@@ -15,6 +15,7 @@ const PERMISSIVE = /^(\(?(MIT|ISC|BSD-2-Clause|BSD-3-Clause|0BSD|Apache-2\.0|CC0
 // These are build tooling pulled in by the `expo` package (CLI / Metro CSS) and
 // are not bundled into the shipped app.
 const ALLOW = {
+  '@expo-google-fonts/inter': 'MIT (loader code) AND OFL-1.1 (Inter font files). OFL is a permissive font licence: free to bundle and ship in apps.',
   'node-forge': 'Dual-licensed; used under BSD-3-Clause. Expo CLI dev-server tooling only.',
   lightningcss: 'MPL-2.0 (file-level copyleft). Build-time CSS transformer used by Metro; not shipped.',
   'lightningcss-linux-x64-gnu': 'Native binary of lightningcss; build-time only.',

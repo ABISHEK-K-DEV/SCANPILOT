@@ -1,9 +1,11 @@
 {
   "name": "scanpilot",
   "version": "0.1.0",
+  "license": "MIT",
   "main": "expo-router/entry",
   "dependencies": {
     "@cantoo/pdf-lib": "^2.11.1",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@expo/ui": "~58.0.26",
     "@expo/vector-icons": "^15.1.1",
     "expo": "~58.0.22",
@@ -34,6 +36,7 @@
     "expo-web-browser": "~58.0.7",
     "fflate": "^0.8.3",
     "jpeg-js": "^0.4.4",
+    "lucide-react-native": "^1.68.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
@@ -81,6 +84,7 @@
   "jest": {
     "preset": "jest-expo",
     "moduleNameMapper": {
+      "^lucide-react-native/icons/(.*)$": "<rootDir>/node_modules/lucide-react-native/dist/cjs/icons/$1.js",
       "^@/assets/(.*)$": "<rootDir>/assets/$1",
       "^@/(.*)$": "<rootDir>/src/$1"
     },

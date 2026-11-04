@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { MIN_TOUCH, useAppTheme } from '@/theme';
@@ -9,6 +9,8 @@ import { Icon, type IconName } from './Icon';
 interface ListRowProps {
   icon?: IconName;
   iconColor?: string;
+  /** Tile behind the icon; defaults to a neutral tint. */
+  iconBackground?: string;
   title: string;
   subtitle?: string;
   value?: string;
@@ -19,18 +21,25 @@ interface ListRowProps {
   destructive?: boolean;
 }
 
-export function ListRow({ icon, iconColor, title, subtitle, value, trailing, onPress, disabled, showChevron, destructive }: ListRowProps) {
+export function ListRow({ icon, iconColor, iconBackground, title, subtitle, value, trailing, onPress, disabled, showChevron, destructive }: ListRowProps) {
   const { colors, spacing, radius } = useAppTheme();
   const titleColor = destructive ? colors.danger : colors.text;
   const content = (
     <>
       {icon ? (
-        <View style={[styles.iconWrap, { backgroundColor: destructive ? colors.dangerSoft : colors.primarySoft, borderRadius: radius.sm }]}>
-          <Icon name={icon} size={18} color={iconColor ?? (destructive ? colors.danger : colors.primary)} />
+        <View
+          style={[
+            styles.iconWrap,
+            { backgroundColor: iconBackground ?? (destructive ? colors.dangerSoft : colors.surfaceAlt), borderRadius: radius.sm + 2 },
+          ]}
+        >
+          <Icon name={icon} size={18} color={iconColor ?? (destructive ? colors.danger : colors.textMuted)} />
         </View>
       ) : null}
       <View style={styles.text}>
-        <AppText color={titleColor}>{title}</AppText>
+        <AppText variant="body" color={titleColor} style={styles.title}>
+          {title}
+        </AppText>
         {subtitle ? (
           <AppText variant="caption" tone="muted">
             {subtitle}
@@ -38,12 +47,12 @@ export function ListRow({ icon, iconColor, title, subtitle, value, trailing, onP
         ) : null}
       </View>
       {value ? (
-        <AppText variant="caption" tone="muted">
+        <AppText variant="caption" tone="muted" numberOfLines={1} style={styles.value}>
           {value}
         </AppText>
       ) : null}
       {trailing}
-      {showChevron ?? !!onPress ? <Icon name="chevron-forward" size={18} color={colors.textSubtle} /> : null}
+      {showChevron ?? !!onPress ? <Icon name="chevron-forward" size={17} color={colors.textSubtle} /> : null}
     </>
   );
   const style = [styles.row, { paddingHorizontal: spacing.lg, gap: spacing.md, minHeight: MIN_TOUCH + 8 }];
@@ -63,8 +72,10 @@ export function ListRow({ icon, iconColor, title, subtitle, value, trailing, onP
   );
 }
 
-export function ListGroup({ children, title }: { children: ReactNode; title?: string }) {
+/** Rounded group of rows with inset hairline separators. */
+export function ListGroup({ children, title, footer }: { children: ReactNode; title?: string; footer?: string }) {
   const { colors, radius, spacing } = useAppTheme();
+  const rows = Children.toArray(children).filter(isValidElement);
   return (
     <View style={{ gap: spacing.sm }}>
       {title ? (
@@ -81,14 +92,27 @@ export function ListGroup({ children, title }: { children: ReactNode; title?: st
           overflow: 'hidden',
         }}
       >
-        {children}
+        {rows.map((row, i) => (
+          <Fragment key={row.key ?? i}>
+            {i > 0 ? <View style={[styles.separator, { backgroundColor: colors.border, marginLeft: spacing.lg }]} /> : null}
+            {row}
+          </Fragment>
+        ))}
       </View>
+      {footer ? (
+        <AppText variant="caption" tone="subtle" style={{ paddingHorizontal: spacing.xs }}>
+          {footer}
+        </AppText>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  iconWrap: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  text: { flex: 1, gap: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 11 },
+  iconWrap: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  text: { flex: 1, gap: 1 },
+  title: { fontSize: 15 },
+  value: { maxWidth: '45%' },
+  separator: { height: StyleSheet.hairlineWidth },
 });

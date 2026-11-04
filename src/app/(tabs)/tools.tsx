@@ -13,17 +13,18 @@ export default function ToolsScreen() {
   const tools = useToolLauncher();
   const [query, setQuery] = useState('');
   const contentWidth = Math.min(width, 820) - spacing.lg * 2;
-  const columns = contentWidth >= 560 ? 4 : 3;
-  const tileWidth = (contentWidth - spacing.sm * (columns - 1)) / columns;
+  const columns = contentWidth >= 560 ? 3 : 2;
+  const gap = spacing.md - 2;
+  const tileWidth = Math.floor((contentWidth - gap * (columns - 1)) / columns);
   const matches = searchTools(query);
 
   return (
     <Screen scroll>
-      <AppText variant="display" style={{ marginTop: spacing.md }}>
+      <AppText variant="display" style={{ marginTop: spacing.lg }}>
         Tools
       </AppText>
-      <AppText tone="muted" style={{ marginTop: spacing.xs, marginBottom: spacing.md }}>
-        {TOOLS.filter((t) => t.available).length} free tools · offline · no watermark
+      <AppText tone="muted" style={{ marginTop: spacing.xs, marginBottom: spacing.lg }}>
+        {TOOLS.filter((t) => t.available).length} PDF tools that run offline, with no watermark.
       </AppText>
       <SearchField value={query} onChangeText={setQuery} placeholder="Search tools — e.g. sign, merge, word" />
       {matches.length === 0 ? <EmptyState compact icon="search" title="No tool found" message={`Nothing matches "${query.trim()}".`} /> : null}
@@ -33,9 +34,9 @@ export default function ToolsScreen() {
         return (
           <View key={cat.id}>
             <SectionHeader title={cat.label} />
-            <View style={[styles.grid, { gap: spacing.sm }]}>
+            <View style={[styles.grid, { gap }]}>
               {list.map((t) => (
-                <ToolTile key={t.id} compact icon={t.icon} label={t.label} description={t.description} category={t.category} comingSoon={!t.available} width={tileWidth} onPress={() => tools.launch(t.id)} />
+                <ToolTile key={t.id} icon={t.icon} label={t.label} description={t.description} category={t.category} comingSoon={!t.available} width={tileWidth} onPress={() => tools.launch(t.id)} />
               ))}
             </View>
           </View>

@@ -1,7 +1,7 @@
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MIN_TOUCH, useAppTheme } from '@/theme';
+import { elevation, MIN_TOUCH, useAppTheme } from '@/theme';
 
 import { AppText } from './AppText';
 import { Icon, type IconName } from './Icon';
@@ -28,7 +28,7 @@ interface ActionSheetProps {
 
 /** Bottom sheet with a list of actions. Selecting an action closes the sheet first. */
 export function ActionSheet({ visible, title, subtitle, actions, onClose }: ActionSheetProps) {
-  const { colors, radius, spacing } = useAppTheme();
+  const { colors, radius, spacing, dark } = useAppTheme();
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
@@ -37,16 +37,17 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose }: Acti
         style={[
           styles.sheet,
           {
-            backgroundColor: colors.surface,
+            backgroundColor: colors.surfaceRaised,
             borderTopLeftRadius: radius.xl,
             borderTopRightRadius: radius.xl,
             paddingBottom: insets.bottom + spacing.md,
           },
+          !dark && elevation.raised,
         ]}
       >
-        <View style={[styles.handle, { backgroundColor: colors.border }]} />
+        <View style={[styles.handle, { backgroundColor: colors.borderStrong }]} />
         {title ? (
-          <View style={{ paddingHorizontal: spacing.xl, paddingBottom: spacing.sm, gap: 2 }}>
+          <View style={{ paddingHorizontal: spacing.xl, paddingTop: spacing.xs, paddingBottom: spacing.md, gap: 2 }}>
             <AppText variant="heading" numberOfLines={2}>
               {title}
             </AppText>
@@ -60,6 +61,7 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose }: Acti
         <ScrollView bounces={false}>
           {actions.map((action) => {
             const color = action.destructive ? colors.danger : action.selected ? colors.primary : colors.text;
+            const tile = action.destructive ? colors.dangerSoft : action.selected ? colors.primarySoft : colors.surfaceAlt;
             return (
               <Pressable
                 key={action.key}
@@ -75,14 +77,16 @@ export function ActionSheet({ visible, title, subtitle, actions, onClose }: Acti
                 accessibilityState={{ disabled: !!action.disabled, selected: !!action.selected }}
                 style={({ pressed }) => [
                   styles.row,
-                  { paddingHorizontal: spacing.xl, gap: spacing.lg, minHeight: MIN_TOUCH + 4 },
+                  { paddingHorizontal: spacing.xl, gap: spacing.md + 2, minHeight: MIN_TOUCH + 8 },
                   pressed && { backgroundColor: colors.surfacePressed },
                   action.disabled && { opacity: 0.45 },
                 ]}
               >
-                <Icon name={action.icon} color={color} />
+                <View style={[styles.tile, { backgroundColor: tile, borderRadius: radius.sm + 2 }]}>
+                  <Icon name={action.icon} size={19} color={action.destructive || action.selected ? color : colors.textMuted} />
+                </View>
                 <View style={styles.flex}>
-                  <AppText variant="body" color={color}>
+                  <AppText variant={action.selected ? 'bodyStrong' : 'body'} color={color}>
                     {action.label}
                   </AppText>
                   {action.hint ? (
@@ -106,7 +110,8 @@ const SHEET_DISMISS_DELAY_MS = 250;
 const styles = StyleSheet.create({
   backdrop: { ...StyleSheet.absoluteFill },
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '80%', paddingTop: 8 },
-  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginBottom: 12 },
+  handle: { alignSelf: 'center', width: 36, height: 4, borderRadius: 2, marginBottom: 14 },
+  tile: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center' },
   flex: { flex: 1 },
 });

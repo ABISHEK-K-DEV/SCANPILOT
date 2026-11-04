@@ -97,6 +97,18 @@ Security: App lock (fingerprint/face/PIN, re-locks after 30 s in background) and
 
 Not offline-feasible and therefore not offered: Word/Excel/PowerPoint → PDF and layout-preserving PDF → Office conversions (they need a full office engine or a cloud service, which would break the privacy promise).
 
+## Design system refresh ✅
+Professional visual overhaul across every screen, driven from shared tokens and components so no screen drifts:
+- **Tokens** (`src/theme/tokens.ts`): neutral slate palette with one indigo accent, a dark "ink" hero surface, restrained category accents, layered elevation, and the **Inter** typeface (400/500/600/700, one family per weight so Android never fakes bold; `AppText` maps `fontWeight` overrides to the right face).
+- **Icons**: one consistent line-icon family (Lucide, ISC) behind `Icon` — per-icon imports keep the bundle small; the `IconName` type makes any unmapped name a compile error.
+- **Start-up**: native splash hands over to an animated `BootScreen` (mark with sweeping scan beam + slim progress bar) while the library opens.
+- **Loading**: `ProgressOverlay` rebuilt as a compact dialog with an animated `ProgressRing` (percentage or spinning arc) and a full-width Cancel; `LoadingState` uses the same ring.
+- **Onboarding**: swipeable three-step introduction with illustrated scenes, animated dots and Continue → Get started.
+- **Home**: ink scanner hero, Import PDF / JPG to PDF cards, 4-column quick tools; Tools tab is a two-column card grid; Settings opens with a library summary; tab bar uses a pill indicator.
+- **Scan review**: labelled toolbar tiles, dashed "Add" page tile, sticky Add + Save bar.
+- **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (permissions / conditions / limitations) and full text; third-party acknowledgements are collapsed beneath it (their notices must still be shipped).
+- **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
+
 ## Milestone 3 — Filters & enhancement ✅
 Scan review → Filter: Original, Auto enhance, Document (shadow & colour-cast removal), Grayscale, Black & white (adaptive threshold), High contrast, Photo; apply to one or all pages; switching filters never stacks (each page keeps its pre-filter image).
 

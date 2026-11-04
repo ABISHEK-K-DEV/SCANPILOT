@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { useAppTheme } from '@/theme';
+import { elevation, useAppTheme } from '@/theme';
 import { errorMessage } from '@/utils/errors';
 import { MAX_NAME_LENGTH, validateName } from '@/utils/filename';
 
@@ -45,7 +45,7 @@ function PromptBody({
   onCancel,
   onSubmit,
 }: TextPromptModalProps) {
-  const { colors, radius, spacing, typography } = useAppTheme();
+  const { colors, radius, spacing, typography, dark } = useAppTheme();
   const [value, setValue] = useState(initialValue);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -72,7 +72,11 @@ function PromptBody({
           <Pressable
             onPress={() => undefined}
             accessible={false}
-            style={[styles.panel, { backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.xl, gap: spacing.md }]}
+            style={[
+              styles.panel,
+              { backgroundColor: colors.surfaceRaised, borderRadius: radius.xl, padding: spacing.xl, gap: spacing.md, borderColor: colors.border, borderWidth: dark ? StyleSheet.hairlineWidth : 0 },
+              !dark && elevation.raised,
+            ]}
           >
             <AppText variant="heading">{title}</AppText>
             {message ? <AppText tone="muted">{message}</AppText> : null}
@@ -100,7 +104,7 @@ function PromptBody({
                   color: colors.text,
                   backgroundColor: colors.surfaceAlt,
                   borderRadius: radius.md,
-                  borderColor: error ? colors.danger : colors.border,
+                  borderColor: error ? colors.danger : colors.borderStrong,
                   paddingHorizontal: spacing.md,
                 },
               ]}
@@ -124,6 +128,6 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   panel: { width: '100%', maxWidth: 420 },
-  input: { minHeight: 48, borderWidth: 1 },
+  input: { minHeight: 50, borderWidth: 1 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end' },
 });

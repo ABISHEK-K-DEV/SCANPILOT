@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText, Icon, type IconName } from '@/components/ui';
 import { MIN_TOUCH, useAppTheme } from '@/theme';
@@ -13,7 +13,7 @@ interface ToolbarButtonProps {
 
 export function ToolbarButton({ icon, label, onPress, disabled, destructive }: ToolbarButtonProps) {
   const { colors, radius } = useAppTheme();
-  const color = destructive ? colors.danger : colors.text;
+  const tile = destructive ? colors.dangerSoft : colors.surfaceAlt;
   return (
     <Pressable
       onPress={onPress}
@@ -23,11 +23,13 @@ export function ToolbarButton({ icon, label, onPress, disabled, destructive }: T
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
         styles.button,
-        { borderRadius: radius.md, backgroundColor: pressed ? colors.surfacePressed : 'transparent', opacity: disabled ? 0.4 : 1 },
+        { borderRadius: radius.md, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 },
       ]}
     >
-      <Icon name={icon} size={22} color={color} />
-      <AppText variant="caption" color={color} numberOfLines={1}>
+      <View style={[styles.tile, { backgroundColor: tile, borderRadius: radius.md }]}>
+        <Icon name={icon} size={20} color={destructive ? colors.danger : colors.textMuted} />
+      </View>
+      <AppText variant="caption" color={destructive ? colors.danger : colors.textMuted} numberOfLines={1} style={styles.label}>
         {label}
       </AppText>
     </Pressable>
@@ -35,5 +37,7 @@ export function ToolbarButton({ icon, label, onPress, disabled, destructive }: T
 }
 
 const styles = StyleSheet.create({
-  button: { flex: 1, minHeight: MIN_TOUCH + 12, alignItems: 'center', justifyContent: 'center', gap: 2, paddingHorizontal: 2 },
+  button: { flex: 1, minHeight: MIN_TOUCH + 12, alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 2, paddingVertical: 4 },
+  tile: { width: 42, height: 36, alignItems: 'center', justifyContent: 'center' },
+  label: { fontSize: 12, fontWeight: '500' },
 });

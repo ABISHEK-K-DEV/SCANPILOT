@@ -37,7 +37,7 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Import PDFs (multi-select, header validation) and convert photos to a PDF (ordered multi-select, resized & re-encoded on device).
 * Native PDF viewer with page indicator, password-protected PDF support, page-count backfill.
 * Document actions: share, save to device (Android folder picker), rename, favourite, move, duplicate, delete.
-* Light/dark/system theme, onboarding, privacy page, open-source licences, storage usage & temp-file cleanup.
+* Professional light/dark/system design system (Inter type, Lucide icons), animated start-up screen, swipeable onboarding, progress dialogs, privacy page, MIT licence page with third-party acknowledgements, storage usage & temp-file cleanup.
 * Tested PDF engine (pdf-lib): images→PDF, merge, split, extract, rotate, reorder, delete, duplicate — UI arrives in Milestone 4.
 
 Tools that need Android's native renderer (edit, sign, redact, OCR, compress, PDF→JPG/Word) show
@@ -225,5 +225,6 @@ docs/                  Technology decisions, architecture
 
 ## Licence
 
-No licence has been chosen for ScanPilot's own source code yet. Third-party
-components keep their own licences — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+ScanPilot is released under the [MIT License](LICENSE). The app shows the same
+text in **Settings → Licence** (`src/features/appLicense.ts` — keep the two in sync).
+Third-party components keep their own licences — see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
