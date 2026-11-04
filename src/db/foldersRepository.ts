@@ -7,6 +7,7 @@ interface FolderRow {
   name: string;
   created_at: number;
   updated_at: number;
+  is_locked?: number;
   document_count?: number;
 }
 
@@ -16,6 +17,7 @@ function fromRow(row: FolderRow): FolderWithCount {
     name: row.name,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    isLocked: row.is_locked === 1,
     documentCount: row.document_count ?? 0,
   };
 }
@@ -50,11 +52,12 @@ export async function folderNameExists(name: string, excludeId?: string): Promis
 
 export async function insertFolder(folder: Folder): Promise<void> {
   const db = await getDatabase();
-  await db.runAsync('INSERT INTO folders (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)', [
+  await db.runAsync('INSERT INTO folders (id, name, created_at, updated_at, is_locked) VALUES (?, ?, ?, ?, ?)', [
     folder.id,
     folder.name,
     folder.createdAt,
     folder.updatedAt,
+    folder.isLocked ? 1 : 0,
   ]);
 }
 
@@ -70,4 +73,9 @@ export async function deleteFolderRow(id: string): Promise<void> {
     await db.runAsync('UPDATE documents SET folder_id = NULL WHERE folder_id = ?', [id]);
     await db.runAsync('DELETE FROM folders WHERE id = ?', [id]);
   });
+}
+
+export async function setFolderLockedRow(id: string, locked: boolean): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('UPDATE folders SET is_locked = ?, updated_at = ? WHERE id = ?', [locked ? 1 : 0, Date.now(), id]);
 }

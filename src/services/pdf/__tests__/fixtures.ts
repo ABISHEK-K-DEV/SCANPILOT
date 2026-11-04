@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from '@cantoo/pdf-lib';
 
 /** Builds an n-page PDF whose pages have distinct widths so order can be verified. */
 export async function makePdf(pageCount: number, label = 'Doc'): Promise<Uint8Array> {

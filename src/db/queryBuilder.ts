@@ -31,8 +31,10 @@ export function buildDocumentQuery(query: DocumentQuery = {}): SqlQuery {
   const params: (string | number)[] = [];
   const search = query.search?.trim();
   if (search) {
-    where.push("name LIKE ? ESCAPE '\\'");
-    params.push(`%${escapeLike(search)}%`);
+    // Matches the file name or any OCR'd text inside the document.
+    where.push("(name LIKE ? ESCAPE '\\' OR id IN (SELECT document_id FROM document_text WHERE text LIKE ? ESCAPE '\\'))");
+    const pattern = `%${escapeLike(search)}%`;
+    params.push(pattern, pattern);
   }
   if (query.folderId === null) where.push('folder_id IS NULL');
   else if (typeof query.folderId === 'string') {
@@ -40,6 +42,10 @@ export function buildDocumentQuery(query: DocumentQuery = {}): SqlQuery {
     params.push(query.folderId);
   }
   if (query.favoritesOnly) where.push('is_favorite = 1');
+  // Documents in locked folders stay hidden everywhere except inside that folder once unlocked.
+  if (!query.includeLocked && typeof query.folderId !== 'string') {
+    where.push('(folder_id IS NULL OR folder_id NOT IN (SELECT id FROM folders WHERE is_locked = 1))');
+  }
   let sql = 'SELECT * FROM documents';
   if (where.length > 0) sql += ` WHERE ${where.join(' AND ')}`;
   sql += ` ORDER BY ${orderByClause(query.sort ?? { field: 'date', direction: 'desc' })}`;

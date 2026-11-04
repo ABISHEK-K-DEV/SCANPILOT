@@ -21,7 +21,23 @@ export interface NativePdfInfo {
   pageSizes: [number, number][];
 }
 
+export interface OcrLine {
+  text: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface OcrResult {
+  text: string;
+  width: number;
+  height: number;
+  lines: OcrLine[];
+}
+
 interface ScanPilotNativeModule {
+  recognizeText(uri: string, script: 'latin' | 'devanagari'): Promise<OcrResult>;
   scanDocument(options: { pageLimit?: number; galleryImport?: boolean }): Promise<NativeScanResult>;
   getPdfInfo(uri: string): Promise<NativePdfInfo>;
   renderPdfPage(uri: string, pageIndex: number, dpi: number, quality: number, maxEdge: number, outputUri: string): Promise<RenderedPage>;

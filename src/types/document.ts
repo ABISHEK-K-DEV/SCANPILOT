@@ -26,6 +26,8 @@ export interface ScanDocument {
 export interface Folder {
   id: string;
   name: string;
+  /** Locked folders need the device unlock (biometrics/PIN) to open; their documents are hidden elsewhere. */
+  isLocked?: boolean;
   createdAt: number;
   updatedAt: number;
 }
@@ -49,6 +51,8 @@ export interface DocumentQuery {
   /** `undefined` = any folder, `null` = root (unfiled) only. */
   folderId?: string | null;
   favoritesOnly?: boolean;
+  /** Include documents that live in locked folders (only after the user unlocked them). */
+  includeLocked?: boolean;
   sort?: SortOption;
   limit?: number;
 }

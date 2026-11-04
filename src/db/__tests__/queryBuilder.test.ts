@@ -1,16 +1,18 @@
 import { buildDocumentQuery, escapeLike, orderByClause } from '../queryBuilder';
 
 describe('buildDocumentQuery', () => {
-  it('defaults to newest first with no filters', () => {
-    expect(buildDocumentQuery()).toEqual({ sql: 'SELECT * FROM documents ORDER BY updated_at DESC', params: [] });
+  it('defaults to newest first and hides locked folders', () => {
+    const { sql, params } = buildDocumentQuery();
+    expect(sql).toBe('SELECT * FROM documents WHERE (folder_id IS NULL OR folder_id NOT IN (SELECT id FROM folders WHERE is_locked = 1)) ORDER BY updated_at DESC');
+    expect(params).toEqual([]);
   });
 
-  it('combines search, folder, favourites and limit with bound parameters', () => {
+  it('combines search (name or OCR text), folder, favourites and limit with bound parameters', () => {
     const { sql, params } = buildDocumentQuery({ search: ' tax ', folderId: 'f1', favoritesOnly: true, limit: 5 });
-    expect(sql).toBe(
-      "SELECT * FROM documents WHERE name LIKE ? ESCAPE '\\' AND folder_id = ? AND is_favorite = 1 ORDER BY updated_at DESC LIMIT ?",
-    );
-    expect(params).toEqual(['%tax%', 'f1', 5]);
+    expect(sql).toContain('(name LIKE ? ESCAPE');
+    expect(sql).toContain('document_text WHERE text LIKE ?');
+    expect(sql).not.toContain('is_locked'); // explicit folder: shown once the user opened it
+    expect(params).toEqual(['%tax%', '%tax%', 'f1', 5]);
   });
 
   it('filters root documents when folderId is null', () => {
@@ -19,7 +21,7 @@ describe('buildDocumentQuery', () => {
 
   it('escapes LIKE wildcards so "100%" matches literally', () => {
     expect(escapeLike('100%_a\\b')).toBe('100\\%\\_a\\\\b');
-    expect(buildDocumentQuery({ search: '50%' }).params).toEqual(['%50\\%%']);
+    expect(buildDocumentQuery({ search: '50%' }).params).toEqual(['%50\\%%', '%50\\%%']);
   });
 
   it('maps each sort option to a whitelisted clause', () => {

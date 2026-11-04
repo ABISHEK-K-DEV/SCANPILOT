@@ -37,4 +37,14 @@ export const MIGRATIONS: readonly string[] = [
     value TEXT NOT NULL
   );
   `,
+  // v2 — OCR text for search; locked folders
+  `
+  CREATE TABLE IF NOT EXISTS document_text (
+    document_id TEXT NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    page INTEGER NOT NULL,
+    text TEXT NOT NULL,
+    PRIMARY KEY (document_id, page)
+  );
+  ALTER TABLE folders ADD COLUMN is_locked INTEGER NOT NULL DEFAULT 0;
+  `,
 ];

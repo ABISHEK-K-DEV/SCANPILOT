@@ -18,4 +18,7 @@ dependencies {
   implementation 'com.facebook.react:react-android'
   // Google ML Kit Document Scanner (runs inside Google Play services; free, no camera permission needed).
   implementation 'com.google.android.gms:play-services-mlkit-document-scanner:16.0.0'
+  // On-device OCR with bundled models (works offline, nothing is uploaded): Latin + Devanagari (Hindi).
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
+  implementation 'com.google.mlkit:text-recognition-devanagari:16.0.1'
 }

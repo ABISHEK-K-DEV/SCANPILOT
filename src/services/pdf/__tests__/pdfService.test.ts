@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument } from '@cantoo/pdf-lib';
 
 import { CancelledError, UserFacingError } from '@/utils/errors';
 

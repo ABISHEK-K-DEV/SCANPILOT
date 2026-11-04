@@ -8,7 +8,11 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.exception.Exceptions
@@ -91,6 +95,53 @@ class ScanPilotNativeModule : Module() {
       } catch (e: Exception) {
         promise.reject("ERR_SCAN_RESULT", e.message ?: "Could not read the scanned pages.", e)
       }
+    }
+
+    /**
+     * On-device text recognition. `script` is "latin" or "devanagari" (Devanagari
+     * also reads Latin text). Line boxes are in pixels of the upright input image.
+     */
+    AsyncFunction("recognizeText") { uri: String, script: String, promise: Promise ->
+      val context = appContext.reactContext
+      if (context == null) {
+        promise.reject("ERR_CONTEXT", "The app is not ready. Please try again.", null)
+        return@AsyncFunction
+      }
+      val image = try {
+        InputImage.fromFilePath(context, Uri.parse(uri))
+      } catch (e: Exception) {
+        promise.reject("ERR_OCR_IMAGE", "Could not read the image for text recognition.", e)
+        return@AsyncFunction
+      }
+      val recognizer = if (script == "devanagari") {
+        TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
+      } else {
+        TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+      }
+      val upright = image.rotationDegrees % 180 == 0
+      val width = if (upright) image.width else image.height
+      val height = if (upright) image.height else image.width
+      recognizer.process(image)
+        .addOnSuccessListener { result ->
+          val lines = result.textBlocks.flatMap { block ->
+            block.lines.map { line ->
+              val box = line.boundingBox
+              mapOf(
+                "text" to line.text,
+                "left" to (box?.left ?: 0),
+                "top" to (box?.top ?: 0),
+                "width" to (box?.width() ?: 0),
+                "height" to (box?.height() ?: 0),
+              )
+            }
+          }
+          recognizer.close()
+          promise.resolve(mapOf("text" to result.text, "width" to width, "height" to height, "lines" to lines))
+        }
+        .addOnFailureListener { e ->
+          recognizer.close()
+          promise.reject("ERR_OCR", e.message ?: "Text recognition failed.", e)
+        }
     }
 
     AsyncFunction("getPdfInfo") { uri: String ->
