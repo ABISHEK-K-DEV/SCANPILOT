@@ -1,0 +1,82 @@
+# Builds an installable, standalone ScanPilot APK (JavaScript bundled inside,
+# no Metro/dev server needed) and publishes it as a workflow artifact.
+#
+# The release build is signed with the Expo template's public debug keystore:
+# fine for sideloading and testing, NOT for Google Play (use EAS / your own
+# upload key for that).
+name: Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/scanpilot-document-scanner-qb0w6g]
+    paths-ignore: ['**.md', 'docs/**']
+
+concurrency:
+  group: android-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Android SDK components
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "platforms;android-37" "build-tools;37.0.0" "ndk;27.1.12297006" "platform-tools" > /dev/null
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and unit tests
+        run: |
+          npm run typecheck
+          npm test -- --ci
+
+      - name: Generate native Android project
+        run: npx expo prebuild --platform android --no-install
+        env:
+          CI: '1'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK
+        working-directory: android
+        env:
+          NODE_ENV: production
+        run: >
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+          -Pandroid.enableMinifyInReleaseBuilds=false
+          -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g"
+
+      - name: Rename APK
+        run: |
+          VERSION=$(node -p "require('./app.json').expo.version")
+          mkdir -p dist-apk
+          cp android/app/build/outputs/apk/release/app-release.apk "dist-apk/ScanPilot-${VERSION}-${GITHUB_SHA::7}.apk"
+          ls -lh dist-apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScanPilot-apk
+          path: dist-apk/*.apk
+          if-no-files-found: error
+          retention-days: 30
