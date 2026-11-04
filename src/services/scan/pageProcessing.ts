@@ -12,6 +12,7 @@ import { UserFacingError } from '@/utils/errors';
 import { createId } from '@/utils/id';
 
 import { encodeBmp24 } from './bmp';
+import { type Adjustments, adjust, applyFilter, type FilterId, toRgb } from './filters';
 import { boundingRect, isAxisAlignedRect, isConvexQuad, outputSizeForQuad, type Quad } from './geometry';
 import type { ScanPage } from './types';
 import { warpPerspective } from './warp';
@@ -136,6 +137,25 @@ export async function cropImage(page: ScanPage, quad: Quad): Promise<SavedImage>
   const bmp = new File(sessionDir(), `${createId()}.bmp`);
   bmp.create({ overwrite: true });
   await bmp.write(encodeBmp24(warped));
+  try {
+    return await render(bmp.uri, () => undefined);
+  } finally {
+    deleteFileQuietly(bmp.uri);
+  }
+}
+
+/**
+ * Applies a colour filter (and optional brightness/contrast) to `sourceUri`,
+ * writing a new JPEG. The source is untouched so filters can be switched freely.
+ */
+export async function filterImage(sourceUri: string, filter: FilterId, adjustments: Adjustments = { brightness: 0, contrast: 0 }): Promise<SavedImage> {
+  await nextFrame();
+  const decoded = decodeJpeg(await new File(sourceUri).bytes(), { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 256 });
+  await nextFrame();
+  const processed = adjust(applyFilter(decoded, filter), adjustments);
+  const bmp = new File(sessionDir(), `${createId()}.bmp`);
+  bmp.create({ overwrite: true });
+  await bmp.write(encodeBmp24(toRgb(processed)));
   try {
     return await render(bmp.uri, () => undefined);
   } finally {

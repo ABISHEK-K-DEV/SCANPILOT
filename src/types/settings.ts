@@ -7,6 +7,8 @@ export interface AppSettings {
   onboardingComplete: boolean;
   viewMode: ViewMode;
   sort: SortOption;
+  /** Require fingerprint/face/PIN when opening the app. */
+  appLock: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -14,4 +16,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   onboardingComplete: false,
   viewMode: 'grid',
   sort: { field: 'date', direction: 'desc' },
+  appLock: false,
 };

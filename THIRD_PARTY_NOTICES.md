@@ -13,7 +13,12 @@ Gradle/CocoaPods are listed manually below.
 | --- | --- | --- | --- |
 | React, React Native | MIT | App framework | Yes |
 | Expo SDK, Expo Router, expo-* modules | MIT | Native modules, navigation, build tooling | Yes |
-| pdf-lib 1.17.1 | MIT | Creating/modifying PDFs (merge, split, rotate, images→PDF) | Yes |
+| @cantoo/pdf-lib 2.11 (maintained fork of pdf-lib) | MIT | Creating/modifying/encrypting PDFs | Yes |
+| fflate 0.8 | MIT | .docx and .zip export | Yes |
+| culori, node-html-better-parser | MIT | Dependencies of @cantoo/pdf-lib | Yes |
+| react-native-svg 15 | MIT | Signature pad and annotation drawing | Yes |
+| expo-print, expo-clipboard, expo-local-authentication, expo-linear-gradient, expo-haptics | MIT | Text→PDF/print, copy text, app lock, UI | Yes |
+| Google ML Kit Text Recognition v2 (`com.google.mlkit:text-recognition`, `-devanagari` 16.0.1) | ML Kit Terms (free, closed source, bundled on-device models) | Offline OCR | Yes (Android) |
 | react-native-pdf 7.x | MIT | PDF viewer component | Yes |
 | AndroidPdfViewer (zacharee fork) | Apache-2.0 | Android viewer widget used by react-native-pdf | Yes (Android) |
 | PdfiumAndroidKt (`io.legere:pdfiumandroid`) | Apache-2.0 | Android PDFium bindings | Yes (Android) |
@@ -36,10 +41,3 @@ Apache-2.0 components require that their licence text and any NOTICE file be
 reproduced with binary distributions. Before the first store release, generate a
 full native notice bundle (e.g. Google's `oss-licenses-plugin` on Android and a
 CocoaPods acknowledgements plist on iOS) and link it from the licences screen.
-
-Planned (not yet integrated — see `docs/TECHNOLOGY.md`):
-
-| Component | Licence | Milestone |
-| --- | --- | --- |
-| @react-native-ml-kit/text-recognition | MIT | 5 |
-| Google ML Kit Text Recognition v2 (bundled models) | ML Kit Terms (free, closed source, on-device) | 5 |

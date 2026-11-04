@@ -5,13 +5,39 @@ import { Alert } from 'react-native';
 import { LibraryBrowser } from '@/components/documents/LibraryBrowser';
 import { ActionSheet, EmptyState, IconButton, LoadingState, Screen, TextPromptModal } from '@/components/ui';
 import { useFolder } from '@/hooks/useLibraryQueries';
-import { deleteFolder, renameFolder } from '@/services/library/folderService';
+import { deleteFolder, renameFolder, setFolderLocked } from '@/services/library/folderService';
+import { authenticate, canAuthenticate } from '@/services/security/authService';
+import { useSecurityStore } from '@/stores/securityStore';
 import { errorMessage } from '@/utils/errors';
 
 export default function FolderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const folder = useFolder(id);
   const [mode, setMode] = useState<'menu' | 'rename' | null>(null);
+  const unlocked = useSecurityStore((s) => s.unlockedFolders.has(id));
+  const unlockFolder = useSecurityStore((s) => s.unlockFolder);
+  const isLocked = !!folder.data?.isLocked;
+
+  const openLocked = async () => {
+    if (await authenticate(`Open "${folder.data?.name ?? 'folder'}"`)) unlockFolder(id);
+  };
+
+  const toggleLock = async () => {
+    if (!folder.data) return;
+    if (!isLocked) {
+      if (!(await canAuthenticate())) {
+        Alert.alert('Set up a screen lock first', 'Locked folders use your fingerprint, face or device PIN. Add one in your phone settings.');
+        return;
+      }
+      if (!(await authenticate('Lock this folder'))) return;
+      unlockFolder(id);
+      await setFolderLocked(id, true);
+      Alert.alert('Folder locked', 'Its documents are now hidden from Home, Files and search, and need your fingerprint, face or PIN to open.');
+    } else {
+      if (!(await authenticate('Remove the lock'))) return;
+      await setFolderLocked(id, false);
+    }
+  };
 
   const confirmDelete = () => {
     if (!folder.data) return;
@@ -32,7 +58,7 @@ export default function FolderScreen() {
     <Screen edges={['left', 'right']} contentStyle={{ paddingHorizontal: 0, paddingTop: 12 }}>
       <Stack.Screen
         options={{
-          title: folder.data?.name ?? 'Folder',
+          title: `${isLocked ? '🔒 ' : ''}${folder.data?.name ?? 'Folder'}`,
           headerRight: folder.data ? () => <IconButton icon="ellipsis-horizontal" label="Folder actions" onPress={() => setMode('menu')} /> : undefined,
         }}
       />
@@ -41,7 +67,11 @@ export default function FolderScreen() {
       ) : !folder.data ? (
         <EmptyState icon="folder-outline" title="Folder not found" message="It may have been deleted." actionLabel="Go back" onAction={() => router.back()} />
       ) : (
-        <LibraryBrowser folderId={id} />
+        isLocked && !unlocked ? (
+          <EmptyState icon="lock-closed" title="This folder is locked" message="Use your fingerprint, face or screen lock to see its documents." actionLabel="Unlock" onAction={() => void openLocked()} />
+        ) : (
+          <LibraryBrowser folderId={id} />
+        )
       )}
       <ActionSheet
         visible={mode === 'menu'}
@@ -49,6 +79,13 @@ export default function FolderScreen() {
         onClose={() => setMode(null)}
         actions={[
           { key: 'rename', label: 'Rename folder', icon: 'create-outline', onPress: () => setMode('rename') },
+          {
+            key: 'lock',
+            label: isLocked ? 'Remove lock' : 'Lock folder',
+            icon: isLocked ? 'lock-open-outline' : 'lock-closed-outline',
+            hint: isLocked ? undefined : 'Hide its documents and require your fingerprint, face or PIN',
+            onPress: () => toggleLock().catch((e) => Alert.alert('Could not change the lock', errorMessage(e))),
+          },
           { key: 'delete', label: 'Delete folder', icon: 'trash-outline', destructive: true, hint: 'Documents are kept', onPress: confirmDelete },
         ]}
       />

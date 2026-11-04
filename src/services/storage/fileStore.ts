@@ -95,3 +95,25 @@ export function storageUsage(): StorageUsage {
     tempBytes: dirSize(tempDir()),
   };
 }
+
+export interface WorkDir {
+  /** file:// URI for a file inside this directory. */
+  fileUri: (name: string) => string;
+  remove: () => void;
+}
+
+/** A fresh scratch directory under temp (wiped on next launch even if `remove` is never called). */
+export function createWorkDir(prefix: string): WorkDir {
+  const dir = new Directory(tempDir(), `${prefix}-${createId()}`);
+  dir.create({ intermediates: true, idempotent: true });
+  return {
+    fileUri: (name) => new File(dir, name).uri,
+    remove: () => {
+      try {
+        if (dir.exists) dir.delete();
+      } catch {
+        // ignore
+      }
+    },
+  };
+}

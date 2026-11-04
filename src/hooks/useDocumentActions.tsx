@@ -4,7 +4,8 @@ import { Alert } from 'react-native';
 
 import { ActionSheet, type SheetAction, TextPromptModal } from '@/components/ui';
 import { listFolders } from '@/db/foldersRepository';
-import { tool } from '@/features/tools';
+import { type ToolId, TOOLS } from '@/features/tools';
+import { printDocument } from '@/services/share/printService';
 import {
   deleteDocument,
   duplicateDocument,
@@ -18,7 +19,10 @@ import type { FolderWithCount, ScanDocument } from '@/types/document';
 import { errorMessage } from '@/utils/errors';
 import { formatBytes, formatPageCount } from '@/utils/format';
 
-type Mode = { kind: 'menu' } | { kind: 'rename' } | { kind: 'move'; folders: FolderWithCount[] } | { kind: 'new-folder' };
+/** Creation tools don't take an existing document. */
+const DOC_TOOL_EXCLUDE: ToolId[] = ['text-to-pdf'];
+
+type Mode = { kind: 'menu' } | { kind: 'tools' } | { kind: 'rename' } | { kind: 'move'; folders: FolderWithCount[] } | { kind: 'new-folder' };
 
 function report(title: string) {
   return (error: unknown) => Alert.alert(title, errorMessage(error));
@@ -96,25 +100,8 @@ export function useDocumentActions(options: { onDeleted?: () => void; hideOpen?:
       onPress: () => setFavorite(target.id, !target.isFavorite).catch(report('Could not update')),
     },
     { key: 'rename', label: 'Rename', icon: 'create-outline', onPress: () => setMode({ kind: 'rename' }) },
-    {
-      key: 'organize',
-      label: 'Organise pages',
-      icon: 'albums-outline',
-      hint: 'Reorder, rotate, delete, extract',
-      onPress: () => router.push({ pathname: '/tool/organize', params: { id: target.id } }),
-    },
-    { key: 'split', label: 'Split', icon: 'cut-outline', onPress: () => router.push({ pathname: '/tool/split', params: { id: target.id } }) },
-    { key: 'merge', label: 'Merge with other PDFs', icon: 'git-merge-outline', onPress: () => router.push({ pathname: '/tool/merge', params: { ids: target.id } }) },
-    ...(tool('compress').available
-      ? [
-          {
-            key: 'compress',
-            label: 'Compress',
-            icon: 'contract-outline' as const,
-            onPress: () => router.push({ pathname: '/tool/compress', params: { id: target.id } }),
-          },
-        ]
-      : []),
+    { key: 'tools', label: 'PDF tools…', icon: 'grid-outline', hint: 'Sign, edit, compress, split, convert and more', onPress: () => setMode({ kind: 'tools' }) },
+    { key: 'print', label: 'Print', icon: 'print-outline', onPress: () => printDocument(target).catch(report('Could not print')) },
     { key: 'move', label: 'Move to folder', icon: 'folder-open-outline', onPress: openMove },
     {
       key: 'duplicate',
@@ -124,6 +111,21 @@ export function useDocumentActions(options: { onDeleted?: () => void; hideOpen?:
     },
     { key: 'delete', label: 'Delete', icon: 'trash-outline', destructive: true, onPress: () => confirmDelete(target, options.onDeleted) },
   ];
+
+  const toolActions = (target: ScanDocument): SheetAction[] =>
+    TOOLS.filter((t) => t.route && t.available && !DOC_TOOL_EXCLUDE.includes(t.id)).map((t) => ({
+      key: t.id,
+      label: t.label,
+      icon: t.icon,
+      hint: t.description,
+      onPress: () => {
+        const [pathname, query] = (t.route as string).split('?');
+        const params: Record<string, string> = Object.fromEntries(new URLSearchParams(query ?? ''));
+        if (t.id === 'merge') params.ids = target.id;
+        else params.id = target.id;
+        router.push({ pathname: pathname as never, params });
+      },
+    }));
 
   const moveActions = (target: ScanDocument, folders: FolderWithCount[]): SheetAction[] => [
     {
@@ -147,10 +149,10 @@ export function useDocumentActions(options: { onDeleted?: () => void; hideOpen?:
   const elements = doc ? (
     <>
       <ActionSheet
-        visible={mode?.kind === 'menu' || mode?.kind === 'move'}
-        title={mode?.kind === 'move' ? `Move "${doc.name}"` : doc.name}
-        subtitle={mode?.kind === 'move' ? undefined : `${formatPageCount(doc.pageCount)} · ${formatBytes(doc.sizeBytes)}`}
-        actions={mode?.kind === 'move' ? moveActions(doc, mode.folders) : menuActions(doc)}
+        visible={mode?.kind === 'menu' || mode?.kind === 'move' || mode?.kind === 'tools'}
+        title={mode?.kind === 'move' ? `Move "${doc.name}"` : mode?.kind === 'tools' ? 'PDF tools' : doc.name}
+        subtitle={mode?.kind === 'menu' ? `${formatPageCount(doc.pageCount)} · ${formatBytes(doc.sizeBytes)}` : mode?.kind === 'tools' ? doc.name : undefined}
+        actions={mode?.kind === 'move' ? moveActions(doc, mode.folders) : mode?.kind === 'tools' ? toolActions(doc) : menuActions(doc)}
         onClose={close}
       />
       <TextPromptModal

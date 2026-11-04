@@ -1,4 +1,4 @@
-import { deleteFolderRow, folderNameExists, insertFolder, renameFolderRow } from '@/db/foldersRepository';
+import { deleteFolderRow, folderNameExists, insertFolder, listFolders, renameFolderRow, setFolderLockedRow } from '@/db/foldersRepository';
 import { notifyLibraryChanged } from '@/stores/libraryStore';
 import type { Folder } from '@/types/document';
 import { UserFacingError } from '@/utils/errors';
@@ -30,4 +30,21 @@ export async function renameFolder(id: string, input: string): Promise<void> {
 export async function deleteFolder(id: string): Promise<void> {
   await deleteFolderRow(id);
   notifyLibraryChanged();
+}
+
+export async function setFolderLocked(id: string, locked: boolean): Promise<void> {
+  await setFolderLockedRow(id, locked);
+  notifyLibraryChanged();
+}
+
+/** Returns the id of the locked folder, creating "Locked" if none exists yet. */
+export async function ensureLockedFolder(): Promise<string> {
+  const existing = (await listFolders()).find((f) => f.isLocked);
+  if (existing) return existing.id;
+  const name = (await folderNameExists('Locked')) ? 'Locked folder' : 'Locked';
+  const now = Date.now();
+  const folder: Folder = { id: createId(), name, createdAt: now, updatedAt: now, isLocked: true };
+  await insertFolder(folder);
+  notifyLibraryChanged();
+  return folder.id;
 }

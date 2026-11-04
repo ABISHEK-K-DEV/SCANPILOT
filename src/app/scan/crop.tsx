@@ -27,7 +27,7 @@ export default function CropScreen() {
     setBusy(true);
     try {
       const result = await cropImage(page, quad);
-      update(page.id, result);
+      update(page.id, { ...result, base: undefined, filter: undefined });
       router.back();
     } catch (error) {
       Alert.alert('Could not crop', errorMessage(error));
@@ -42,7 +42,7 @@ export default function CropScreen() {
       {
         text: 'Restore',
         onPress: () => {
-          update(page.id, { uri: page.originalUri, width: page.originalWidth, height: page.originalHeight });
+          update(page.id, { uri: page.originalUri, width: page.originalWidth, height: page.originalHeight, base: undefined, filter: undefined });
           router.back();
         },
       },

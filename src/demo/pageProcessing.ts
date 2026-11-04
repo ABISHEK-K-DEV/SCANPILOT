@@ -15,3 +15,6 @@ export async function rotateImage(page: ScanPage) {
 export async function cropImage(page: ScanPage) {
   return { uri: page.uri, width: page.width, height: page.height };
 }
+export async function filterImage(uri: string) {
+  return { uri, width: 1240, height: 1754 };
+}

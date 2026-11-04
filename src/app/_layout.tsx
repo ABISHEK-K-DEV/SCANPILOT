@@ -4,9 +4,11 @@ import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { LockScreen, useAppLockWatcher } from '@/components/security/LockScreen';
 import { ErrorState } from '@/components/ui';
 import { getDatabase } from '@/db/database';
 import { initialiseStorage } from '@/services/storage/fileStore';
+import { useSecurityStore } from '@/stores/securityStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useAppTheme } from '@/theme';
 import { errorMessage } from '@/utils/errors';
@@ -27,6 +29,9 @@ export default function RootLayout() {
   const theme = useAppTheme();
   const onboardingComplete = useSettingsStore((state) => state.settings.onboardingComplete);
   const [boot, setBoot] = useState<BootState>({ status: 'loading' });
+  const appLock = useSettingsStore((state) => state.settings.appLock);
+  const locked = useSecurityStore((state) => state.locked);
+  useAppLockWatcher();
 
   const start = useCallback(() => {
     bootstrap()
@@ -89,6 +94,19 @@ export default function RootLayout() {
           <Stack.Screen name="tool/split" options={{ title: 'Split PDF' }} />
           <Stack.Screen name="tool/compress" options={{ title: 'Compress PDF' }} />
           <Stack.Screen name="tool/organize" options={{ title: 'Organise pages' }} />
+          <Stack.Screen name="tool/sign" options={{ title: 'Sign PDF' }} />
+          <Stack.Screen name="tool/edit" options={{ title: 'Edit PDF' }} />
+          <Stack.Screen name="tool/redact" options={{ title: 'Redact PDF' }} />
+          <Stack.Screen name="tool/watermark" options={{ title: 'Add watermark' }} />
+          <Stack.Screen name="tool/page-numbers" options={{ title: 'Page numbers' }} />
+          <Stack.Screen name="tool/protect" options={{ title: 'Protect PDF' }} />
+          <Stack.Screen name="tool/unlock" options={{ title: 'Unlock PDF' }} />
+          <Stack.Screen name="tool/repair" options={{ title: 'Repair PDF' }} />
+          <Stack.Screen name="tool/rotate" options={{ title: 'Rotate PDF' }} />
+          <Stack.Screen name="tool/crop" options={{ title: 'Crop PDF' }} />
+          <Stack.Screen name="tool/ocr" options={{ title: 'Extract text' }} />
+          <Stack.Screen name="tool/pdf-to-images" options={{ title: 'PDF to JPG' }} />
+          <Stack.Screen name="tool/text-to-pdf" options={{ title: 'Text to PDF' }} />
           <Stack.Screen name="scan/review" options={{ title: 'Review scan', gestureEnabled: false }} />
           <Stack.Screen
             name="scan/crop"
@@ -101,6 +119,7 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" options={{ headerShown: false, animation: 'fade' }} />
         </Stack.Protected>
       </Stack>
+      {appLock && locked ? <LockScreen /> : null}
     </ThemeProvider>
   );
 }

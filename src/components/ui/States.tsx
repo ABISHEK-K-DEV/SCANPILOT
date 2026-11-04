@@ -69,3 +69,13 @@ const styles = StyleSheet.create({
   badge: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
   message: { maxWidth: 360 },
 });
+
+/** Small centred spinner that fills its parent. */
+export function ActivityIndicatorBox() {
+  const { colors } = useAppTheme();
+  return (
+    <View style={[styles.center, styles.fill]}>
+      <ActivityIndicator color={colors.primary} />
+    </View>
+  );
+}

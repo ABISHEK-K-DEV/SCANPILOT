@@ -6,7 +6,7 @@ ScanPilot is an offline-first document scanner and PDF toolkit for Android
 (primary) and iOS, built with React Native, Expo and strict TypeScript.
 Documents never leave the device unless the user explicitly shares or exports them.
 
-**Status:** Milestones 1 (foundation), 2 (scanner) and 4 (PDF toolkit) complete — see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+**Status:** Milestones 1–5 complete — scanner, filters, 21 PDF tools, editing & signing, offline OCR, app lock — see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ![All screens](docs/screenshots/overview.png)
 
@@ -18,6 +18,8 @@ Documents never leave the device unless the user explicitly shares or exports th
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Licences of bundled software |
 
 ## What works today
+
+**Everyday PDF tools (Milestone 5)** — Sign, Edit (text, pen, highlight, shapes, whiteout, images), Redact (secure), Watermark, Page numbers, Protect/Unlock (AES-256), Crop, Rotate, Repair, Extract text (offline OCR, English & Hindi), PDF to Word, PDF to JPG, Text to PDF, Print, App lock & Locked folder, scan filters.
 
 **PDF toolkit (Milestone 4)**
 * Merge, Split (ranges / extract / every page), Compress (Android; low/medium/high with size estimates), Organise pages (rotate, reorder, duplicate, delete, extract) — from Home, Tools or any document's ⋮ menu. Results can be opened or shared immediately; originals are kept unless you choose "Replace the original".
@@ -38,8 +40,8 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Light/dark/system theme, onboarding, privacy page, open-source licences, storage usage & temp-file cleanup.
 * Tested PDF engine (pdf-lib): images→PDF, merge, split, extract, rotate, reorder, delete, duplicate — UI arrives in Milestone 4.
 
-Tools that are not built yet (OCR, annotate, sign) are shown
-**disabled with a “Soon” badge** — no button silently does nothing.
+Tools that need Android's native renderer (edit, sign, redact, OCR, compress, PDF→JPG/Word) show
+**“Soon” on iOS** until the iOS renderer lands — no button silently does nothing.
 
 ## Requirements
 

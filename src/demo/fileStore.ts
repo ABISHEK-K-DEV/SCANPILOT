@@ -21,3 +21,6 @@ export function newTempFile() {
 }
 export async function writeBytesAtomically(): Promise<void> {}
 export async function copyInto(): Promise<void> {}
+export function createWorkDir() {
+  return { fileUri: (name: string) => `/tmp/${name}`, remove: () => undefined };
+}

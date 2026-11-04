@@ -26,7 +26,7 @@ if (!skipBuild) {
   execFileSync('npx', ['expo', 'export', '--platform', 'web', '--output-dir', dist, '--clear'], {
     cwd: root,
     stdio: 'inherit',
-    env: { ...process.env, SCANPILOT_DEMO: '1', EXPO_OFFLINE: '1', CI: '1' },
+    env: { ...process.env, SCANPILOT_DEMO: '1', EXPO_PUBLIC_SCANPILOT_DEMO: '1', EXPO_OFFLINE: '1', CI: '1' },
   });
   execFileSync('python3', ['-I', path.join(root, 'scripts/screenshots/make_demo_assets.py'), path.join(dist, 'demo-assets')], { stdio: 'inherit' });
 }
@@ -101,9 +101,87 @@ const shots = [
     await p.getByLabel('Save changes').click();
   }],
   ['34-document-menu', '/document/doc-lease', async (p) => p.getByLabel('More actions').click()],
+  ['35-sign-empty', '/tool/sign'],
+  ['36-sign-pad', '/tool/sign?id=doc-lease', async (p) => {
+    await p.getByLabel('Signature', { exact: true }).click();
+    await p.waitForTimeout(500);
+    await drawSignature(p);
+  }],
+  ['37-sign-placed', '/tool/sign?id=doc-lease', async (p) => {
+    await p.getByLabel('Signature', { exact: true }).click();
+    await p.waitForTimeout(500);
+    await drawSignature(p);
+    await p.getByLabel('Use signature').click();
+    await p.waitForTimeout(500);
+    await p.getByLabel('Date', { exact: true }).click();
+  }],
+  ['38-edit', '/tool/edit?id=doc-invoice', async (p) => {
+    const area = await p.getByLabel('Page 1 editing area').boundingBox();
+    const stroke = async (pts) => {
+      await p.mouse.move(area.x + pts[0][0] * area.width, area.y + pts[0][1] * area.height);
+      await p.mouse.down();
+      for (const [x, y] of pts.slice(1)) await p.mouse.move(area.x + x * area.width, area.y + y * area.height, { steps: 6 });
+      await p.mouse.up();
+    };
+    await stroke([[0.55, 0.12], [0.6, 0.08], [0.7, 0.14], [0.8, 0.09], [0.9, 0.13]]);
+    await p.getByLabel('Highlight', { exact: true }).click();
+    await stroke([[0.08, 0.235], [0.4, 0.235]]);
+    await p.getByLabel('Box', { exact: true }).click();
+    await stroke([[0.57, 0.6], [0.95, 0.72]]);
+    await p.getByLabel('Arrow', { exact: true }).click();
+    await stroke([[0.35, 0.82], [0.55, 0.7]]);
+  }],
+  ['39-redact', '/tool/redact?id=doc-id', async (p) => {
+    const area = await p.getByLabel('Page 1 editing area').boundingBox();
+    const box = async (x0, y0, x1, y1) => {
+      await p.mouse.move(area.x + x0 * area.width, area.y + y0 * area.height);
+      await p.mouse.down();
+      await p.mouse.move(area.x + x1 * area.width, area.y + y1 * area.height, { steps: 6 });
+      await p.mouse.up();
+    };
+    await box(0.43, 0.2, 0.8, 0.31);
+    await box(0.2, 0.38, 0.8, 0.43);
+  }],
+  ['40-watermark', '/tool/watermark?id=doc-lease'],
+  ['41-page-numbers', '/tool/page-numbers?id=doc-tax'],
+  ['42-protect', '/tool/protect?id=doc-tax', async (p) => {
+    await p.getByLabel('Password', { exact: true }).fill('secret12');
+    await p.getByLabel('Repeat password').fill('secret12');
+  }],
+  ['43-ocr', '/tool/ocr?id=doc-lease', async (p) => {
+    await p.getByLabel('Extract text', { exact: true }).click();
+    await p.waitForTimeout(600);
+    await p.getByPlaceholder('Search in the text').fill('rent');
+  }],
+  ['44-pdf-to-images', '/tool/pdf-to-images?id=doc-lease', async (p) => p.getByLabel('Convert to JPG').click()],
+  ['45-text-to-pdf', '/tool/text-to-pdf', async (p) => {
+    await p.getByLabel('Title', { exact: true }).fill('Leave application');
+    await p.getByLabel('Text', { exact: true }).fill('Dear Sir/Madam,\n\nI request leave from 10 to 14 November for a family function.\n\nThank you,\nAsha');
+  }],
+  ['46-crop-pdf', '/tool/crop?id=doc-bill'],
+  ['47-unlock', '/tool/unlock?id=doc-tax'],
+  ['48-scan-filters', '/scan/review', async (p) => p.getByLabel('Filter', { exact: true }).click()],
+  ['49-document-tools', '/document/doc-lease', async (p) => {
+    await p.getByLabel('More actions').click();
+    await p.waitForTimeout(400);
+    await p.getByRole('menuitem', { name: 'PDF tools…' }).click();
+  }],
   ['25-crop-editor', '/scan/crop?id=p3', dragCornersOntoPaper],
   ['26-crop-editor-dark', '/scan/crop?id=p3&theme=dark', dragCornersOntoPaper],
 ];
+
+async function drawSignature(page) {
+  const pad = await page.getByLabel('Signature drawing area').boundingBox();
+  const pts = [[0.15, 0.6], [0.2, 0.35], [0.25, 0.65], [0.3, 0.4], [0.36, 0.62], [0.42, 0.45], [0.5, 0.58], [0.58, 0.42], [0.66, 0.6], [0.75, 0.5], [0.85, 0.55]];
+  await page.mouse.move(pad.x + pts[0][0] * pad.width, pad.y + pts[0][1] * pad.height);
+  await page.mouse.down();
+  for (const [x, y] of pts.slice(1)) await page.mouse.move(pad.x + x * pad.width, pad.y + y * pad.height, { steps: 5 });
+  await page.mouse.up();
+  await page.mouse.move(pad.x + 0.3 * pad.width, pad.y + 0.72 * pad.height);
+  await page.mouse.down();
+  await page.mouse.move(pad.x + 0.8 * pad.width, pad.y + 0.7 * pad.height, { steps: 6 });
+  await page.mouse.up();
+}
 
 /** Drags the four handles onto the paper corners in the sample photo (900×1200 image). */
 async function dragCornersOntoPaper(page) {

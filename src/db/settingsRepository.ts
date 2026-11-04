@@ -24,3 +24,20 @@ export async function saveSetting<K extends keyof AppSettings>(key: K, value: Ap
     JSON.stringify(value),
   ]);
 }
+
+/** Arbitrary JSON values outside AppSettings (e.g. saved signatures). */
+export async function loadValue<T>(key: string): Promise<T | null> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ value: string }>('SELECT value FROM settings WHERE key = ?', [`x:${key}`]);
+  if (!row) return null;
+  try {
+    return JSON.parse(row.value) as T;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveValue(key: string, value: unknown): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [`x:${key}`, JSON.stringify(value)]);
+}

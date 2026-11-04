@@ -12,7 +12,7 @@ interface FolderTileProps {
 
 export function FolderTile({ folder, onPress, onLongPress }: FolderTileProps) {
   const { colors, radius, spacing } = useAppTheme();
-  const countLabel = `${folder.documentCount} ${folder.documentCount === 1 ? 'document' : 'documents'}`;
+  const countLabel = folder.isLocked ? 'Locked' : `${folder.documentCount} ${folder.documentCount === 1 ? 'document' : 'documents'}`;
   return (
     <Card
       onPress={onPress}
@@ -22,7 +22,7 @@ export function FolderTile({ folder, onPress, onLongPress }: FolderTileProps) {
       style={[styles.tile, { padding: spacing.md, gap: spacing.sm }]}
     >
       <View style={[styles.icon, { backgroundColor: colors.primarySoft, borderRadius: radius.sm }]}>
-        <Icon name="folder" size={20} color={colors.primary} />
+        <Icon name={folder.isLocked ? 'lock-closed' : 'folder'} size={20} color={colors.primary} />
       </View>
       <View>
         <AppText variant="bodyStrong" numberOfLines={1}>

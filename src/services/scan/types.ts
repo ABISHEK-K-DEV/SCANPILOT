@@ -10,6 +10,9 @@ export interface ScanPage {
   originalUri: string;
   originalWidth: number;
   originalHeight: number;
+  /** Image the current filter was applied to (after crop/rotate). Absent = no filter applied. */
+  base?: { uri: string; width: number; height: number };
+  filter?: import('./filters').FilterId;
 }
 
 export type DocumentPreset = 'original' | 'a4' | 'letter' | 'receipt' | 'business-card' | 'id-card' | 'book';

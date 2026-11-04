@@ -35,11 +35,12 @@ export function selectionAfterRemove(pages: readonly ScanPage[], removedId: stri
 
 /** Files referenced by `previous` that no page in `next` uses any more — safe to delete. */
 export function orphanedFiles(previous: readonly ScanPage[], next: readonly ScanPage[]): string[] {
-  const used = new Set(next.flatMap((page) => [page.uri, page.originalUri]));
+  const used = new Set(next.flatMap((page) => [page.uri, page.originalUri, ...(page.base ? [page.base.uri] : [])]));
   const orphans = new Set<string>();
   for (const page of previous) {
     if (!used.has(page.uri)) orphans.add(page.uri);
     if (!used.has(page.originalUri)) orphans.add(page.originalUri);
+    if (page.base && !used.has(page.base.uri)) orphans.add(page.base.uri);
   }
   return [...orphans];
 }

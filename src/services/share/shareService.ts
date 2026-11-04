@@ -54,3 +54,52 @@ export async function saveToDevice(doc: ScanDocument): Promise<boolean> {
   await target.write(await new File(doc.fileUri).bytes());
   return true;
 }
+
+async function tempExport(name: string, bytes: Uint8Array): Promise<File> {
+  const dir = new Directory(tempDir(), `export-${createId()}`);
+  dir.create({ intermediates: true, idempotent: true });
+  const file = new File(dir, name);
+  file.create({ overwrite: true });
+  await file.write(bytes);
+  return file;
+}
+
+/** Shares any generated file (text, Word, ZIP, image) through the system sheet. */
+export async function shareBytes(name: string, bytes: Uint8Array, mimeType: string, uti?: string): Promise<void> {
+  if (!(await isAvailableAsync())) throw new UserFacingError('Sharing is not available on this device.');
+  const file = await tempExport(name, bytes);
+  await shareAsync(file.uri, { mimeType, UTI: uti, dialogTitle: `Share ${name}` });
+}
+
+/** Android: writes bytes into a user-chosen folder. iOS: falls back to the share sheet. Returns false if cancelled. */
+export async function saveBytesToDevice(name: string, bytes: Uint8Array, mimeType: string): Promise<boolean> {
+  if (!canSaveToDevice) {
+    await shareBytes(name, bytes, mimeType);
+    return true;
+  }
+  let directory: Directory;
+  try {
+    directory = await Directory.pickDirectoryAsync();
+  } catch {
+    return false;
+  }
+  const target = directory.createFile(name, mimeType);
+  await target.write(bytes);
+  return true;
+}
+
+/** Writes several files into one user-chosen folder (Android). Returns the count written, or null if cancelled. */
+export async function saveManyToDevice(files: readonly { name: string; bytes: Uint8Array; mimeType: string }[]): Promise<number | null> {
+  if (!canSaveToDevice) throw new UserFacingError('Saving to a folder is available on Android. Use Share instead.');
+  let directory: Directory;
+  try {
+    directory = await Directory.pickDirectoryAsync();
+  } catch {
+    return null;
+  }
+  for (const f of files) {
+    const target = directory.createFile(f.name, f.mimeType);
+    await target.write(f.bytes);
+  }
+  return files.length;
+}

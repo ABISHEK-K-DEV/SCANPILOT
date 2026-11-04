@@ -48,7 +48,7 @@ describe('Home screen', () => {
     await fireEvent.press(screen.getByLabelText('Import your first PDF'));
     await waitFor(() => expect(importPdfs).toHaveBeenCalledTimes(1));
 
-    await fireEvent.press(screen.getAllByLabelText('Images to PDF')[0]);
+    await fireEvent.press(screen.getAllByLabelText('JPG to PDF')[0]);
     await waitFor(() => expect(importImagesAsPdf).toHaveBeenCalledTimes(1));
   });
 

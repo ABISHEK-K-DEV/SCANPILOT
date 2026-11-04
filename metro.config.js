@@ -38,6 +38,8 @@ if (process.env.SCANPILOT_DEMO === '1') {
     'components/pdf/PdfViewer': 'demo/PdfViewer.tsx',
     'services/tools/compressService': 'demo/compressService.ts',
     'services/tools/organizeService': 'demo/organizeService.ts',
+    'native/pdfRenderer/index': 'demo/pdfRenderer.ts',
+    'services/ocr/ocrService': 'demo/ocrService.ts',
   };
   const upstream = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {

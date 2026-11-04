@@ -1,9 +1,12 @@
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, View } from 'react-native';
+import { Alert, Switch, View } from 'react-native';
 
-import { ActionSheet, AppText, Badge, ListGroup, ListRow, Screen } from '@/components/ui';
+import { ActionSheet, AppText, ListGroup, ListRow, Screen } from '@/components/ui';
+import { ensureLockedFolder } from '@/services/library/folderService';
+import { authenticate, canAuthenticate } from '@/services/security/authService';
+import { useSecurityStore } from '@/stores/securityStore';
 import { useLibraryStats } from '@/hooks/useLibraryQueries';
 import { clearTemp, storageUsage, type StorageUsage } from '@/services/storage/fileStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -14,7 +17,8 @@ import { formatBytes } from '@/utils/format';
 const THEME_LABEL: Record<ThemePreference, string> = { system: 'Match device', light: 'Light', dark: 'Dark' };
 
 export default function SettingsScreen() {
-  const { spacing } = useAppTheme();
+  const { spacing, colors } = useAppTheme();
+  const unlockFolder = useSecurityStore((s) => s.unlockFolder);
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
   const stats = useLibraryStats();
@@ -37,6 +41,25 @@ export default function SettingsScreen() {
     Alert.alert('Temporary files cleared', 'Your documents were not affected.');
   };
 
+  const toggleAppLock = async (enable: boolean) => {
+    if (enable && !(await canAuthenticate())) {
+      Alert.alert('Set up a screen lock first', 'App lock uses your fingerprint, face or device PIN. Add one in your phone settings.');
+      return;
+    }
+    if (await authenticate(enable ? 'Turn on app lock' : 'Turn off app lock')) await update('appLock', enable);
+  };
+
+  const openLockedFolder = async () => {
+    if (!(await canAuthenticate())) {
+      Alert.alert('Set up a screen lock first', 'The locked folder uses your fingerprint, face or device PIN. Add one in your phone settings.');
+      return;
+    }
+    if (!(await authenticate('Open the locked folder'))) return;
+    const id = await ensureLockedFolder();
+    unlockFolder(id);
+    router.push({ pathname: '/folder/[id]', params: { id } });
+  };
+
   const version = Constants.expoConfig?.version ?? '—';
 
   return (
@@ -57,8 +80,14 @@ export default function SettingsScreen() {
 
         <ListGroup title="Privacy & security">
           <ListRow icon="shield-checkmark-outline" title="How ScanPilot protects your files" onPress={() => router.push('/privacy')} />
-          <ListRow icon="lock-closed-outline" title="App lock & biometrics" subtitle="Coming in a future update" trailing={<Badge label="Soon" />} showChevron={false} />
-          <ListRow icon="key-outline" title="Encrypted private folder" subtitle="Coming in a future update" trailing={<Badge label="Soon" />} showChevron={false} />
+          <ListRow
+            icon="finger-print-outline"
+            title="App lock"
+            subtitle="Fingerprint, face or screen lock to open ScanPilot"
+            trailing={<Switch value={settings.appLock} onValueChange={(v) => void toggleAppLock(v)} trackColor={{ true: colors.primary, false: colors.border }} accessibilityLabel="App lock" />}
+            showChevron={false}
+          />
+          <ListRow icon="lock-closed-outline" title="Locked folder" subtitle="Hidden documents that need your fingerprint, face or PIN" onPress={() => void openLockedFolder()} />
         </ListGroup>
 
         <ListGroup title="Storage">

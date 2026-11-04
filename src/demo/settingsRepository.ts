@@ -36,3 +36,11 @@ export async function loadSettings(): Promise<AppSettings> {
 export async function saveSetting(): Promise<void> {
   // In-memory only in the demo build.
 }
+
+const values = new Map<string, unknown>();
+export async function loadValue<T>(key: string): Promise<T | null> {
+  return (values.get(key) as T) ?? null;
+}
+export async function saveValue(key: string, value: unknown): Promise<void> {
+  values.set(key, value);
+}

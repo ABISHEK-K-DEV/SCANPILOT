@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 
-import type { ToolId } from '@/features/tools';
+import { tool, type ToolId } from '@/features/tools';
 
 import { useImportActions } from './useImportActions';
 import { useScanFlow } from './useScanFlow';
@@ -14,28 +14,18 @@ export function useToolLauncher(folderId: string | null = null) {
   const scanner = useScanFlow();
 
   const launch = (id: ToolId, documentId?: string) => {
-    switch (id) {
-      case 'scan':
-        scanner.startScan(folderId);
-        return;
-      case 'import-pdf':
-        void importer.importPdf();
-        return;
-      case 'import-images':
-        void importer.importImages();
-        return;
-      case 'merge':
-        router.push({ pathname: '/tool/merge', params: documentId ? { ids: documentId } : {} });
-        return;
-      case 'split':
-      case 'compress':
-      case 'organize':
-        router.push({ pathname: `/tool/${id}`, params: documentId ? { id: documentId } : {} });
-        return;
-      default:
-        // OCR, annotate and sign are shown as "Soon" and are disabled in the UI.
-        return;
+    if (id === 'scan') return scanner.startScan(folderId);
+    if (id === 'import-pdf') return void importer.importPdf();
+    if (id === 'import-images') return void importer.importImages();
+    const def = tool(id);
+    if (!def.route || !def.available) return;
+    const [pathname, query] = def.route.split('?');
+    const params: Record<string, string> = Object.fromEntries(new URLSearchParams(query ?? ''));
+    if (documentId) {
+      if (id === 'merge') params.ids = documentId;
+      else params.id = documentId;
     }
+    router.push({ pathname: pathname as never, params });
   };
 
   const overlays = (

@@ -72,7 +72,38 @@ independent PDF validation (poppler + pypdf), Metro export for Android & iOS,
 * Automatic edge detection for *gallery* photos (ML Kit does it for camera scans) — OpenCV/VisionCamera fallback, Milestone 6 polish.
 * Drag-and-drop page reordering (arrows used now; drag lands with the Milestone 4 page organiser).
 
-## Milestone 3 — Filters & enhancement ⬜ (next)
+## Milestone 5 — Everyday PDF toolkit, editing, OCR ✅
+
+21 tools, grouped Scan & create · Organise · Edit & sign · Convert · Optimise · Security:
+
+| Tool | Status | How it works |
+| --- | --- | --- |
+| Sign PDF | ✅ Android | Draw on a pad, saved signatures (on device), place/move/resize, date & text; vector ink in the PDF |
+| Edit PDF | ✅ Android | Pen, highlighter, text, box, circle, arrow, line, whiteout, image, signature; undo/redo; colours & widths |
+| Redact PDF | ✅ Android | Boxes are burned into pixels and redacted pages rebuilt from the image — hidden text is truly removed |
+| Watermark | ✅ | Diagonal/centre/tiled text, colour, transparency (Latin characters) |
+| Page numbers | ✅ | 6 positions, 4 styles, skip cover; correct on rotated pages (verified by rendering) |
+| Protect / Unlock | ✅ | AES-256 password with print/copy permissions; unlock with the known password |
+| Crop PDF | ✅ | Drag edges on a preview; all pages or first page |
+| Rotate PDF | ✅ | All pages 90°/180°; per-page via Organise |
+| Repair PDF | ✅ | Rebuilds structure by copying readable pages |
+| Extract text (OCR) | ✅ Android | ML Kit on-device, English and Hindi (+English); copy, .txt, search within, searchable PDF; text indexed for library search |
+| PDF to Word | ✅ Android | OCR text → .docx (layout/images not reproduced, stated in UI) |
+| PDF to JPG | ✅ Android | 150/220/300 dpi; save all to a folder or share as ZIP |
+| JPG to PDF, Text to PDF | ✅ | Text to PDF uses the system print engine, so any script renders |
+| Print | ✅ | From every document's menu |
+
+Security: App lock (fingerprint/face/PIN, re-locks after 30 s in background) and a Locked folder (documents hidden from Home/Files/search until unlocked). Honest note: documents are protected by Android's app sandbox and file-based encryption; the locked folder adds an access gate, not an extra cipher.
+
+Not offline-feasible and therefore not offered: Word/Excel/PowerPoint → PDF and layout-preserving PDF → Office conversions (they need a full office engine or a cloud service, which would break the privacy promise).
+
+## Milestone 3 — Filters & enhancement ✅
+Scan review → Filter: Original, Auto enhance, Document (shadow & colour-cast removal), Grayscale, Black & white (adaptive threshold), High contrast, Photo; apply to one or all pages; switching filters never stacks (each page keeps its pre-filter image).
+
+## Next
+- iOS parity for native-only tools (PDFKit renderer + Vision OCR).
+- Drag-and-drop page reordering; Hindi/Unicode text in watermark & annotations (bundle a Noto font via fontkit).
+
 Colour modes (original, auto, grayscale, B/W, high contrast, clarity, photo), brightness/contrast/sharpness/saturation/exposure, strength slider, before/after, non-destructive edit stack stored in SQLite, export quality.
 
 ## Milestone 4 — PDF toolkit ✅

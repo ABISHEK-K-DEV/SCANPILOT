@@ -42,9 +42,9 @@ export default function FoldersScreen() {
           {folders.data.map((folder) => (
             <ListRow
               key={folder.id}
-              icon="folder"
+              icon={folder.isLocked ? 'lock-closed' : 'folder'}
               title={folder.name}
-              subtitle={`${folder.documentCount} ${folder.documentCount === 1 ? 'document' : 'documents'}`}
+              subtitle={folder.isLocked ? 'Locked · needs fingerprint, face or PIN' : `${folder.documentCount} ${folder.documentCount === 1 ? 'document' : 'documents'}`}
               onPress={() => router.push({ pathname: '/folder/[id]', params: { id: folder.id } })}
               trailing={<IconButton icon="ellipsis-horizontal" label={`Actions for ${folder.name}`} onPress={() => setMode({ kind: 'menu', folder })} />}
               showChevron={false}

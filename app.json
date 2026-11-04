@@ -20,7 +20,7 @@
     "android": {
       "package": "app.scanpilot",
       "adaptiveIcon": {
-        "backgroundColor": "#2D5BFF",
+        "backgroundColor": "#4F4CF8",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -45,7 +45,7 @@
         {
           "backgroundColor": "#F6F8FB",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 120,
+          "imageWidth": 128,
           "dark": {
             "backgroundColor": "#0B1220",
             "image": "./assets/images/splash-icon.png"
@@ -70,6 +70,12 @@
         "expo-sqlite",
         {
           "enableFTS": true
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "ScanPilot uses Face ID to unlock the app and locked folders. Your face data never leaves your device."
         }
       ]
     ],

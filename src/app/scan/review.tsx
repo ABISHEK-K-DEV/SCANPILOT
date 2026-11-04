@@ -19,14 +19,15 @@ import {
 } from '@/components/ui';
 import { useScanFlow } from '@/hooks/useScanFlow';
 import { availableName } from '@/services/library/documentService';
-import { rotateImage } from '@/services/scan/pageProcessing';
+import { FILTERS, type FilterId } from '@/services/scan/filters';
+import { filterImage, rotateImage } from '@/services/scan/pageProcessing';
 import { savePagesAsPdf } from '@/services/scan/scanService';
 import { PRESETS } from '@/services/scan/types';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { useAppTheme } from '@/theme';
 import { errorMessage, isCancelled } from '@/utils/errors';
 
-type Sheet = 'add' | 'rename' | null;
+type Sheet = 'add' | 'rename' | 'filters' | null;
 
 export default function ScanReviewScreen() {
   const { colors, radius, spacing } = useAppTheme();
@@ -69,7 +70,29 @@ export default function ScanReviewScreen() {
     page &&
     withBusy('Rotating page', async () => {
       const result = await rotateImage(page, degrees);
-      update(page.id, result);
+      // Rotating bakes in the current filter; later filters start from the rotated image.
+      update(page.id, { ...result, base: undefined, filter: undefined });
+    });
+
+  const setFilter = (filter: FilterId) =>
+    page &&
+    withBusy('Applying filter', async () => {
+      const base = page.base ?? { uri: page.uri, width: page.width, height: page.height };
+      if (filter === 'original') {
+        update(page.id, { uri: base.uri, width: base.width, height: base.height, base: undefined, filter: undefined });
+        return;
+      }
+      const result = await filterImage(base.uri, filter);
+      update(page.id, { ...result, base, filter });
+    });
+
+  const applyToAll = (filter: FilterId) =>
+    withBusy('Applying to all pages', async () => {
+      for (const p of useScanSession.getState().pages) {
+        const base = p.base ?? { uri: p.uri, width: p.width, height: p.height };
+        if (filter === 'original') update(p.id, { uri: base.uri, width: base.width, height: base.height, base: undefined, filter: undefined });
+        else update(p.id, { ...(await filterImage(base.uri, filter)), base, filter });
+      }
     });
 
   const confirmDelete = () => {
@@ -166,6 +189,7 @@ export default function ScanReviewScreen() {
         <ToolbarButton icon="arrow-undo-outline" label="Left" onPress={() => void rotate(-90)} />
         <ToolbarButton icon="arrow-redo-outline" label="Right" onPress={() => void rotate(90)} />
         <ToolbarButton icon="crop-outline" label="Crop" onPress={() => page && router.push({ pathname: '/scan/crop', params: { id: page.id } })} />
+        <ToolbarButton icon="color-filter-outline" label="Filter" onPress={() => setSheet('filters')} />
         <ToolbarButton icon="camera-reverse-outline" label="Retake" onPress={() => page && void flow.capture({ replace: page.id })} />
         <ToolbarButton icon="trash-outline" label="Delete" destructive onPress={confirmDelete} />
       </View>
@@ -218,6 +242,27 @@ export default function ScanReviewScreen() {
         actions={[
           { key: 'scan', label: 'Scan more pages', icon: 'scan-outline', onPress: () => flow.capture('append') },
           { key: 'photos', label: 'Add from photos', icon: 'images-outline', onPress: () => flow.addFromPhotos('append') },
+        ]}
+      />
+      <ActionSheet
+        visible={sheet === 'filters'}
+        title="Filter"
+        subtitle={`Page ${index + 1} · current: ${FILTERS.find((f) => f.id === (page?.filter ?? 'original'))?.label}`}
+        onClose={() => setSheet(null)}
+        actions={[
+          ...FILTERS.map((f) => ({
+            key: f.id,
+            label: f.label,
+            icon: (f.id === 'original' ? 'image-outline' : f.id === 'bw' ? 'contrast-outline' : f.id === 'clarity' ? 'document-text-outline' : 'color-filter-outline') as 'image-outline',
+            selected: (page?.filter ?? 'original') === f.id,
+            onPress: () => setFilter(f.id),
+          })),
+          {
+            key: 'all',
+            label: `Apply “${FILTERS.find((f) => f.id === (page?.filter ?? 'original'))?.label}” to all pages`,
+            icon: 'copy-outline',
+            onPress: () => applyToAll(page?.filter ?? 'original'),
+          },
         ]}
       />
       <TextPromptModal

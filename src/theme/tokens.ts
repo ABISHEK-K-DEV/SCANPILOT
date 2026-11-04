@@ -73,6 +73,16 @@ export const darkPalette: Palette = {
   tabBar: '#0F1729',
 };
 
+/** Category accents for tool icons: vivid on light, slightly lifted on dark. */
+export const toolAccents: Record<'create' | 'organise' | 'optimise' | 'edit' | 'convert' | 'security', { light: [string, string]; dark: [string, string] }> = {
+  create: { light: ['#2D5BFF', '#E6ECFF'], dark: ['#7D9BFF', '#1C2C57'] },
+  organise: { light: ['#7A3FF2', '#F0E8FF'], dark: ['#B08CFF', '#2E2152'] },
+  edit: { light: ['#E0457B', '#FDE7EF'], dark: ['#FF86AE', '#4A1C2D'] },
+  convert: { light: ['#0E9F8A', '#DDF6F1'], dark: ['#4FD8C2', '#0F3A34'] },
+  optimise: { light: ['#E57A00', '#FFF0DC'], dark: ['#FFB15C', '#43290B'] },
+  security: { light: ['#2F8A3E', '#E2F4E5'], dark: ['#6FD884', '#163A1D'] },
+};
+
 export const spacing = {
   xxs: 2,
   xs: 4,
