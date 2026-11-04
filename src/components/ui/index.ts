@@ -8,6 +8,7 @@ export * from './Icon';
 export * from './IconButton';
 export * from './ListRow';
 export * from './ProgressOverlay';
+export * from './ProgressRing';
 export * from './Screen';
 export * from './SearchField';
 export * from './SectionHeader';

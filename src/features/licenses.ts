@@ -31,7 +31,8 @@ export const LICENSES: readonly LicenseEntry[] = [
   { name: 'Apple VisionKit', license: 'Apple SDK (system framework)', url: 'https://developer.apple.com/documentation/visionkit', usage: 'iOS scanning UI' },
   { name: 'jpeg-js', license: 'BSD-3-Clause', url: 'https://github.com/jpeg-js/jpeg-js', usage: 'Decoding pages for perspective correction' },
   { name: 'Zustand', license: 'MIT', url: 'https://github.com/pmndrs/zustand', usage: 'App state' },
-  { name: 'Ionicons (@expo/vector-icons)', license: 'MIT', url: 'https://github.com/ionic-team/ionicons', usage: 'Icons' },
+  { name: 'Lucide icons (lucide-react-native)', license: 'ISC', url: 'https://github.com/lucide-icons/lucide', usage: 'Icons' },
+  { name: 'Inter typeface (@expo-google-fonts/inter)', license: 'SIL OFL 1.1', url: 'https://github.com/rsms/inter', usage: 'App typeface' },
   { name: 'SQLite', license: 'Public domain', url: 'https://sqlite.org/copyright.html', usage: 'Local metadata database' },
   { name: 'react-native-screens, safe-area-context, gesture-handler, reanimated', license: 'MIT', url: 'https://github.com/software-mansion', usage: 'Navigation and layout primitives' },
 ];

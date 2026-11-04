@@ -22,11 +22,11 @@ export function PageThumb({ page, index, selected, onPress }: PageThumbProps) {
       accessibilityState={{ selected }}
       style={[
         styles.thumb,
-        { borderRadius: radius.sm, borderColor: selected ? colors.primary : colors.border, backgroundColor: colors.surface },
+        { borderRadius: radius.sm + 2, borderColor: selected ? colors.primary : colors.border, backgroundColor: colors.surface },
       ]}
     >
       <Image source={{ uri: page.uri }} style={styles.image} contentFit="cover" recyclingKey={page.uri} />
-      <View style={[styles.badge, { backgroundColor: selected ? colors.primary : colors.overlay, borderRadius: radius.sm }]}>
+      <View style={[styles.badge, { backgroundColor: selected ? colors.primary : 'rgba(15,23,42,0.7)', borderRadius: radius.pill }]}>
         <AppText variant="label" color="#FFFFFF">
           {index + 1}
         </AppText>

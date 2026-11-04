@@ -17,7 +17,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Search documen
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, gap: spacing.sm },
+        { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.md + 2, paddingHorizontal: spacing.md + 2, gap: spacing.sm + 2 },
       ]}
     >
       <Icon name="search" size={18} color={colors.textSubtle} />
@@ -44,6 +44,6 @@ export function SearchField({ value, onChangeText, placeholder = 'Search documen
 }
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center', minHeight: 46, borderWidth: StyleSheet.hairlineWidth },
+  container: { flexDirection: 'row', alignItems: 'center', minHeight: 50, borderWidth: 1 },
   input: { flex: 1, paddingVertical: 10 },
 });

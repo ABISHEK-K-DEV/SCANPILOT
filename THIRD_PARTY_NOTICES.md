@@ -31,7 +31,8 @@ Gradle/CocoaPods are listed manually below.
 | Apple VisionKit | Apple SDK | iOS scanning UI | System framework |
 | jpeg-js 0.4.4 | BSD-3-Clause | JPEG decoding for manual perspective correction | Yes |
 | Zustand | MIT | App state | Yes |
-| Ionicons via @expo/vector-icons | MIT | Icons | Yes |
+| Lucide icons (lucide-react-native) | ISC | Icons | Yes |
+| Inter typeface (@expo-google-fonts/inter) | SIL OFL 1.1 (font), MIT (loader) | App typeface | Yes |
 | SQLite (via expo-sqlite) | Public domain | Local metadata database | Yes |
 | react-native-screens / safe-area-context / gesture-handler / reanimated / worklets | MIT | Navigation & layout primitives | Yes |
 | node-forge | BSD-3-Clause (dual BSD/GPL; used under BSD) | Expo CLI dev server | No (build tool) |

@@ -1,23 +1,24 @@
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Switch, View } from 'react-native';
+import { Alert, StyleSheet, Switch, View } from 'react-native';
 
-import { ActionSheet, AppText, ListGroup, ListRow, Screen } from '@/components/ui';
+import { LogoMark } from '@/components/brand/Logo';
+import { ActionSheet, AppText, Icon, ListGroup, ListRow, Screen } from '@/components/ui';
 import { ensureLockedFolder } from '@/services/library/folderService';
 import { authenticate, canAuthenticate } from '@/services/security/authService';
 import { useSecurityStore } from '@/stores/securityStore';
 import { useLibraryStats } from '@/hooks/useLibraryQueries';
 import { clearTemp, storageUsage, type StorageUsage } from '@/services/storage/fileStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { useAppTheme } from '@/theme';
+import { elevation, useAppTheme } from '@/theme';
 import type { ThemePreference } from '@/types/settings';
 import { formatBytes } from '@/utils/format';
 
 const THEME_LABEL: Record<ThemePreference, string> = { system: 'Match device', light: 'Light', dark: 'Dark' };
 
 export default function SettingsScreen() {
-  const { spacing, colors } = useAppTheme();
+  const { spacing, colors, radius, dark } = useAppTheme();
   const unlockFolder = useSecurityStore((s) => s.unlockFolder);
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.update);
@@ -64,10 +65,38 @@ export default function SettingsScreen() {
 
   return (
     <Screen scroll>
-      <AppText variant="display" style={{ marginTop: spacing.md, marginBottom: spacing.lg }}>
+      <AppText variant="display" style={{ marginTop: spacing.lg, marginBottom: spacing.lg }}>
         Settings
       </AppText>
       <View style={{ gap: spacing.xl }}>
+        <View
+          style={[
+            styles.summary,
+            { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
+            !dark && elevation.card,
+          ]}
+          accessible
+          accessibilityLabel={stats.data ? `Library: ${stats.data.documentCount} documents, ${formatBytes(stats.data.totalBytes)}, stored on this device` : 'Library'}
+        >
+          <View style={[styles.summaryIcon, { backgroundColor: colors.primarySoft, borderRadius: radius.md }]}>
+            <Icon name="documents-outline" size={22} color={colors.primary} />
+          </View>
+          <View style={styles.flex}>
+            <AppText variant="heading">
+              {stats.data ? `${stats.data.documentCount} ${stats.data.documentCount === 1 ? 'document' : 'documents'}` : 'Your library'}
+            </AppText>
+            <AppText variant="caption" tone="muted">
+              {stats.data ? `${formatBytes(stats.data.totalBytes)} · on this device only` : 'On this device only'}
+            </AppText>
+          </View>
+          <View style={[styles.offline, { backgroundColor: colors.successSoft, borderRadius: radius.pill }]}>
+            <Icon name="cloud-offline-outline" size={14} color={colors.success} />
+            <AppText variant="label" color={colors.success}>
+              Offline
+            </AppText>
+          </View>
+        </View>
+
         <ListGroup title="Appearance">
           <ListRow icon="contrast-outline" title="Theme" value={THEME_LABEL[settings.theme]} onPress={() => setThemeSheet(true)} />
           <ListRow
@@ -108,13 +137,17 @@ export default function SettingsScreen() {
 
         <ListGroup title="About">
           <ListRow icon="information-circle-outline" title="Version" value={version} />
-          <ListRow icon="code-slash-outline" title="Open-source licences" onPress={() => router.push('/licenses')} />
+          <ListRow icon="scale" title="Licence" value="MIT License" onPress={() => router.push('/licenses')} />
           <ListRow icon="play-circle-outline" title="Show introduction again" onPress={() => void update('onboardingComplete', false)} />
         </ListGroup>
 
-        <AppText variant="caption" tone="subtle" align="center">
-          ScanPilot is free: no subscription, no watermark, no account.
-        </AppText>
+        <View style={[styles.footer, { gap: spacing.sm }]}>
+          <LogoMark size={36} />
+          <AppText variant="bodyStrong">ScanPilot {version}</AppText>
+          <AppText variant="caption" tone="subtle" align="center">
+            Free, with no subscription, watermark or account.
+          </AppText>
+        </View>
       </View>
 
       <ActionSheet
@@ -132,3 +165,11 @@ export default function SettingsScreen() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 },
+  summary: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
+  summaryIcon: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  offline: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4 },
+  footer: { alignItems: 'center', paddingVertical: 8 },
+});

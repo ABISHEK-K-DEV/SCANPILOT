@@ -1,9 +1,15 @@
+import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
+import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
+import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
+import { Inter_700Bold } from '@expo-google-fonts/inter/700Bold';
+import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { BootScreen } from '@/components/brand/BootScreen';
 import { LockScreen, useAppLockWatcher } from '@/components/security/LockScreen';
 import { ErrorState } from '@/components/ui';
 import { getDatabase } from '@/db/database';
@@ -19,14 +25,22 @@ export { ErrorBoundary } from 'expo-router';
 
 type BootState = { status: 'loading' } | { status: 'ready' } | { status: 'error'; message: string };
 
+/** Keeps the start-up screen up long enough to read as intentional, not as a flicker. */
+const MIN_BOOT_MS = 650;
+
 async function bootstrap(): Promise<void> {
+  const shown = Date.now();
   initialiseStorage();
   await getDatabase();
   await useSettingsStore.getState().load();
+  const remaining = MIN_BOOT_MS - (Date.now() - shown);
+  if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
 }
 
 export default function RootLayout() {
   const theme = useAppTheme();
+  const [fontsLoaded, fontError] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const fontsSettled = fontsLoaded || !!fontError;
   const onboardingComplete = useSettingsStore((state) => state.settings.onboardingComplete);
   const [boot, setBoot] = useState<BootState>({ status: 'loading' });
   const appLock = useSettingsStore((state) => state.settings.appLock);
@@ -36,13 +50,15 @@ export default function RootLayout() {
   const start = useCallback(() => {
     bootstrap()
       .then(() => setBoot({ status: 'ready' }))
-      .catch((error: unknown) => setBoot({ status: 'error', message: errorMessage(error, 'ScanPilot could not open its library.') }))
-      .finally(() => {
-        void SplashScreen.hideAsync();
-      });
+      .catch((error: unknown) => setBoot({ status: 'error', message: errorMessage(error, 'ScanPilot could not open its library.') }));
   }, []);
 
   useEffect(start, [start]);
+
+  // The native splash hands over to the animated BootScreen as soon as fonts are ready.
+  useEffect(() => {
+    if (fontsSettled) void SplashScreen.hideAsync();
+  }, [fontsSettled]);
 
   const retry = () => {
     setBoot({ status: 'loading' });
@@ -63,7 +79,8 @@ export default function RootLayout() {
     },
   };
 
-  if (boot.status === 'loading') return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
+  if (!fontsSettled) return <View style={{ flex: 1, backgroundColor: theme.colors.background }} />;
+  if (boot.status === 'loading') return <BootScreen fontsReady={fontsLoaded} />;
   if (boot.status === 'error') {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -78,8 +95,8 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerTintColor: theme.colors.primary,
-          headerTitleStyle: { color: theme.colors.text, fontWeight: '600' },
-          headerStyle: { backgroundColor: theme.colors.surface },
+          headerTitleStyle: { color: theme.colors.text, fontFamily: theme.typography.heading.fontFamily, fontSize: 17 },
+          headerStyle: { backgroundColor: theme.colors.background },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: theme.colors.background },
           headerBackButtonDisplayMode: 'minimal',
@@ -110,9 +127,9 @@ export default function RootLayout() {
           <Stack.Screen name="scan/review" options={{ title: 'Review scan', gestureEnabled: false }} />
           <Stack.Screen
             name="scan/crop"
-            options={{ title: 'Adjust corners', headerStyle: { backgroundColor: '#0A1120' }, headerTintColor: '#FFFFFF', headerTitleStyle: { color: '#FFFFFF' } }}
+            options={{ title: 'Adjust corners', headerStyle: { backgroundColor: '#0B0D12' }, headerTintColor: '#FFFFFF', headerTitleStyle: { color: '#FFFFFF' } }}
           />
-          <Stack.Screen name="licenses" options={{ title: 'Open-source licences' }} />
+          <Stack.Screen name="licenses" options={{ title: 'Licence' }} />
           <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
         </Stack.Protected>
         <Stack.Protected guard={!onboardingComplete}>

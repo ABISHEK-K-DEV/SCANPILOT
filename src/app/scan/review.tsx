@@ -129,7 +129,6 @@ export default function ScanReviewScreen() {
     <Stack.Screen
       options={{
         title: 'Review scan',
-        headerRight: () => <IconButton icon="add" label="Add pages" onPress={() => setSheet('add')} />,
       }}
     />
   );
@@ -158,13 +157,26 @@ export default function ScanReviewScreen() {
         onPress={() => setSheet('rename')}
         accessibilityRole="button"
         accessibilityLabel={`Document name: ${name}. Tap to rename.`}
-        style={[styles.nameRow, { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.sm }]}
+        style={({ pressed }) => [
+          styles.nameRow,
+          {
+            marginHorizontal: spacing.lg,
+            marginTop: spacing.sm,
+            marginBottom: spacing.md,
+            paddingHorizontal: spacing.md,
+            minHeight: 48,
+            gap: spacing.sm,
+            borderRadius: radius.md + 2,
+            borderColor: colors.border,
+            backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+          },
+        ]}
       >
         <Icon name="document-text-outline" size={18} color={colors.textMuted} />
         <AppText variant="bodyStrong" numberOfLines={1} style={styles.flex}>
           {name}
         </AppText>
-        <Icon name="create-outline" size={18} color={colors.primary} />
+        <Icon name="create-outline" size={17} color={colors.textSubtle} />
       </Pressable>
 
       <View style={[styles.preview, { backgroundColor: colors.surfaceAlt, marginHorizontal: spacing.lg, borderRadius: radius.lg }]}>
@@ -178,8 +190,8 @@ export default function ScanReviewScreen() {
             accessibilityLabel={`Page ${index + 1} of ${pages.length}`}
           />
         ) : null}
-        <View style={[styles.counter, { backgroundColor: colors.overlay, borderRadius: radius.pill }]}>
-          <AppText variant="caption" color="#FFFFFF">
+        <View style={[styles.counter, { backgroundColor: 'rgba(15,23,42,0.72)', borderRadius: radius.pill }]}>
+          <AppText variant="caption" color="#FFFFFF" style={styles.counterText}>
             {index + 1} / {pages.length}
           </AppText>
         </View>
@@ -196,7 +208,7 @@ export default function ScanReviewScreen() {
 
       <View style={[styles.stripHeader, { paddingHorizontal: spacing.lg }]}>
         <AppText variant="label" tone="subtle" style={styles.flex}>
-          PAGES · tap to select
+          {pages.length} {pages.length === 1 ? 'PAGE' : 'PAGES'}
         </AppText>
         <IconButton icon="chevron-back" label="Move page earlier" disabled={index === 0} onPress={() => page && move(page.id, -1)} />
         <IconButton icon="chevron-forward" label="Move page later" disabled={index === pages.length - 1} onPress={() => page && move(page.id, 1)} />
@@ -214,9 +226,17 @@ export default function ScanReviewScreen() {
           onPress={() => setSheet('add')}
           accessibilityRole="button"
           accessibilityLabel="Add pages"
-          style={[styles.addTile, { borderColor: colors.primary, borderRadius: radius.sm, backgroundColor: colors.primarySoft }]}
+          style={({ pressed }) => [
+            styles.addTile,
+            { borderColor: colors.borderStrong, borderRadius: radius.sm + 2, backgroundColor: pressed ? colors.surfacePressed : colors.surface },
+          ]}
         >
-          <Icon name="add" size={26} color={colors.primary} />
+          <View style={[styles.addIcon, { backgroundColor: colors.primarySoft }]}>
+            <Icon name="add" size={18} color={colors.primary} strokeWidth={2.2} />
+          </View>
+          <AppText variant="label" tone="muted">
+            Add
+          </AppText>
         </Pressable>
       </ScrollView>
 
@@ -231,8 +251,14 @@ export default function ScanReviewScreen() {
         ))}
       </ScrollView>
 
-      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
-        <Button label={`Save PDF · ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`} icon="checkmark-circle-outline" fullWidth onPress={() => void save()} />
+      <View style={[styles.saveBar, { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md, gap: spacing.sm, borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+        <Button label="Add" icon="add" variant="secondary" onPress={() => setSheet('add')} accessibilityHint="Scan more pages or add photos" />
+        <Button
+          label={`Save PDF · ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`}
+          icon="checkmark"
+          onPress={() => void save()}
+          style={styles.flex}
+        />
       </View>
 
       <ActionSheet
@@ -292,13 +318,16 @@ export default function ScanReviewScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignSelf: 'center' },
-  nameRow: { flexDirection: 'row', alignItems: 'center' },
+  nameRow: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
   preview: { flex: 1, overflow: 'hidden', minHeight: 200 },
-  counter: { position: 'absolute', bottom: 10, right: 10, paddingHorizontal: 10, paddingVertical: 3 },
+  counter: { position: 'absolute', bottom: 12, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 4 },
+  counterText: { fontWeight: '600' },
+  saveBar: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
+  addIcon: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   // Horizontal ScrollViews in a flex column otherwise grow to fill the free space.
   noGrow: { flexGrow: 0, flexShrink: 0 },
   chips: { alignItems: 'center' },
   toolbar: { flexDirection: 'row' },
   stripHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  addTile: { width: 64, height: 86, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  addTile: { width: 64, height: 86, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 4 },
 });
