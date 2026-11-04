@@ -6,7 +6,7 @@ ScanPilot is an offline-first document scanner and PDF toolkit for Android
 (primary) and iOS, built with React Native, Expo and strict TypeScript.
 Documents never leave the device unless the user explicitly shares or exports them.
 
-**Status:** Milestones 1 (foundation) and 2 (scanner) complete — see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
+**Status:** Milestones 1 (foundation), 2 (scanner) and 4 (PDF toolkit) complete — see [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md).
 
 ![All screens](docs/screenshots/overview.png)
 
@@ -18,6 +18,9 @@ Documents never leave the device unless the user explicitly shares or exports th
 | [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) | Licences of bundled software |
 
 ## What works today
+
+**PDF toolkit (Milestone 4)**
+* Merge, Split (ranges / extract / every page), Compress (Android; low/medium/high with size estimates), Organise pages (rotate, reorder, duplicate, delete, extract) — from Home, Tools or any document's ⋮ menu. Results can be opened or shared immediately; originals are kept unless you choose "Replace the original".
 
 **Scanner (Milestone 2)**
 * Camera scanning with Google ML Kit Document Scanner (Android) / VisionKit (iOS): live edge detection, auto-capture, flash, perspective correction, multi-page, retakes — without the Android CAMERA permission.
@@ -35,7 +38,7 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Light/dark/system theme, onboarding, privacy page, open-source licences, storage usage & temp-file cleanup.
 * Tested PDF engine (pdf-lib): images→PDF, merge, split, extract, rotate, reorder, delete, duplicate — UI arrives in Milestone 4.
 
-Tools that are not built yet (merge, split, compress, OCR…) are shown
+Tools that are not built yet (OCR, annotate, sign) are shown
 **disabled with a “Soon” badge** — no button silently does nothing.
 
 ## Requirements
@@ -55,8 +58,9 @@ Windows: `%LOCALAPPDATA%\Android\Sdk`) and add `$ANDROID_HOME/platform-tools` to
 ## Why a development build (not Expo Go)
 
 ScanPilot uses native modules that are **not included in Expo Go**:
-`react-native-pdf`, `react-native-blob-util`, `react-native-pdf-thumbnail`
-and `react-native-document-scanner-plugin` (ML Kit / VisionKit). On Android the
+`react-native-pdf`, `react-native-blob-util`, `react-native-pdf-thumbnail`,
+ScanPilot's own module `modules/scanpilot-native` (Android: ML Kit document
+scanner + PdfRenderer) and `react-native-document-scanner-plugin` (iOS VisionKit). On Android the
 scanner also needs **Google Play services** on the device. You run the
 app in a **development build** — your own debug APK containing these modules
 plus `expo-dev-client`. JavaScript changes still hot-reload from Metro.
@@ -107,6 +111,13 @@ Release-mode build on a device (no Metro, closer to production performance):
 ```bash
 npx expo run:android --variant release
 ```
+
+## Get an installable APK from GitHub Actions
+
+Every push to the branch runs `.github/workflows/android-apk.yml`, which builds a
+standalone release APK (signed with the public debug key — fine for testing, not
+for Google Play). Download it from the run's **Artifacts → ScanPilot-apk**, or start
+it manually: **Actions → Android APK → Run workflow**.
 
 ## Run on Android — cloud build with EAS (no Android Studio needed)
 
@@ -170,8 +181,9 @@ Builds a web demo with in-memory sample data (`SCANPILOT_DEMO=1`, see `metro.con
 ## Project structure
 
 ```
+modules/scanpilot-native/  Local Expo module (Kotlin): ML Kit scanner + PdfRenderer
 src/
-  app/                 Expo Router screens (routes only)
+  app/                 Expo Router screens (routes only; tool/ = PDF toolkit)
     (tabs)/            Home, Files, Tools, Settings
     document/[id].tsx  PDF viewer
     folder/[id].tsx    Folder contents
@@ -182,7 +194,8 @@ src/
   hooks/               Data + action hooks used by screens
   services/            Business logic (no React): pdf, library, import, share, storage, thumbnails
   db/                  SQLite connection, migrations, repositories, query builder
-  native/              Native adapters (scanner: ML Kit / VisionKit)
+  native/              Native adapters (scanner, PDF page renderer)
+  services/tools/      Merge, split, compress, organise orchestration
   services/scan/       Scan session: geometry, perspective warp, page processing, PDF creation
   demo/                Screenshot-build stand-ins (only used when SCANPILOT_DEMO=1)
   stores/              Zustand stores (settings, library revision)

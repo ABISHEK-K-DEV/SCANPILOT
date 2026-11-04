@@ -8,8 +8,7 @@ import { ToolTile } from '@/components/documents/ToolTile';
 import { AppText, Button, EmptyState, ErrorState, Icon, Screen, SectionHeader } from '@/components/ui';
 import { type ToolId, TOOLS } from '@/features/tools';
 import { useDocumentActions } from '@/hooks/useDocumentActions';
-import { useImportActions } from '@/hooks/useImportActions';
-import { useScanFlow } from '@/hooks/useScanFlow';
+import { useToolLauncher } from '@/hooks/useToolLauncher';
 import { useDocuments, useFolders } from '@/hooks/useLibraryQueries';
 import { useAppTheme } from '@/theme';
 import type { ScanDocument } from '@/types/document';
@@ -46,18 +45,14 @@ export default function HomeScreen() {
   const favourites = useDocuments({ favoritesOnly: true, sort: { field: 'opened', direction: 'desc' }, limit: 10 });
   const folders = useFolders();
   const actions = useDocumentActions();
-  const importer = useImportActions();
-  const scanner = useScanFlow();
+  const tools = useToolLauncher();
+  const { importer, scanner } = tools;
 
   const contentWidth = Math.min(width, MAX_WIDTH) - spacing.lg * 2;
   const columns = contentWidth >= 560 ? 3 : 2;
   const tileWidth = (contentWidth - spacing.md * (columns - 1)) / columns;
 
-  const runTool = (id: ToolId) => {
-    if (id === 'scan') scanner.startScan();
-    else if (id === 'import-pdf') void importer.importPdf();
-    else if (id === 'import-images') void importer.importImages();
-  };
+  const runTool = (id: ToolId) => tools.launch(id);
 
   const refresh = () => {
     recent.refresh();
@@ -163,8 +158,7 @@ export default function HomeScreen() {
       ) : null}
 
       {actions.elements}
-      {importer.overlay}
-      {scanner.overlay}
+      {tools.overlays}
     </Screen>
   );
 }

@@ -4,6 +4,7 @@ import { Alert } from 'react-native';
 
 import { ActionSheet, type SheetAction, TextPromptModal } from '@/components/ui';
 import { listFolders } from '@/db/foldersRepository';
+import { tool } from '@/features/tools';
 import {
   deleteDocument,
   duplicateDocument,
@@ -95,6 +96,25 @@ export function useDocumentActions(options: { onDeleted?: () => void; hideOpen?:
       onPress: () => setFavorite(target.id, !target.isFavorite).catch(report('Could not update')),
     },
     { key: 'rename', label: 'Rename', icon: 'create-outline', onPress: () => setMode({ kind: 'rename' }) },
+    {
+      key: 'organize',
+      label: 'Organise pages',
+      icon: 'albums-outline',
+      hint: 'Reorder, rotate, delete, extract',
+      onPress: () => router.push({ pathname: '/tool/organize', params: { id: target.id } }),
+    },
+    { key: 'split', label: 'Split', icon: 'cut-outline', onPress: () => router.push({ pathname: '/tool/split', params: { id: target.id } }) },
+    { key: 'merge', label: 'Merge with other PDFs', icon: 'git-merge-outline', onPress: () => router.push({ pathname: '/tool/merge', params: { ids: target.id } }) },
+    ...(tool('compress').available
+      ? [
+          {
+            key: 'compress',
+            label: 'Compress',
+            icon: 'contract-outline' as const,
+            onPress: () => router.push({ pathname: '/tool/compress', params: { id: target.id } }),
+          },
+        ]
+      : []),
     { key: 'move', label: 'Move to folder', icon: 'folder-open-outline', onPress: openMove },
     {
       key: 'duplicate',

@@ -75,8 +75,34 @@ independent PDF validation (poppler + pypdf), Metro export for Android & iOS,
 ## Milestone 3 — Filters & enhancement ⬜ (next)
 Colour modes (original, auto, grayscale, B/W, high contrast, clarity, photo), brightness/contrast/sharpness/saturation/exposure, strength slider, before/after, non-destructive edit stack stored in SQLite, export quality.
 
-## Milestone 4 — PDF toolkit UI ⬜
-Merge (pick, preview, order, name), split (all pages / ranges / selection), page organiser (thumbnail grid: drag-reorder, rotate, delete, duplicate, extract), compress (low/medium/high, estimated vs actual size), rotate. Engine already implemented and tested.
+## Milestone 4 — PDF toolkit ✅
+
+| Tool | Status | Notes |
+| --- | --- | --- |
+| Merge | ✅ | Pick from library (multi-select, search) or import, reorder, remove, name output, progress + cancel, Open/Share result. Originals kept |
+| Split | ✅ | By ranges (`1-3, 4-6, 7-` → one PDF each), extract pages (one PDF), every page separately; live validation & preview of the files that will be created |
+| Compress | ✅ Android | Low/Medium/High (200/150/110 dpi). Estimated size per level measured from sample pages; actual size shown after; nothing saved if the result would not be smaller. Pages are re-rendered as images (stated in the UI). iOS: shown as "Soon" until a PDFKit renderer is added |
+| Organise pages | ✅ | Thumbnail grid; select pages; rotate left/right, move earlier/later, duplicate, delete (never all pages), extract to new PDF; save as copy or replace original (confirm); unsaved-changes guard |
+| Rotate | ✅ | Individual or multiple pages, clockwise/anticlockwise (organiser) |
+| Entry points | ✅ | Home tiles, Tools tab, and every document's ⋮ menu |
+
+Drag-and-drop reordering is deferred: move earlier/later buttons are used for reliability and accessibility.
+
+### Android scanner fix (found on a real device)
+`react-native-document-scanner-plugin` crashed on Android with
+`NullPointerException in HostFunction` (it casts `ReactContext.getCurrentActivity()`,
+which is null under React Native 0.88 bridgeless mode). Android now uses ScanPilot's
+own Expo module `modules/scanpilot-native` (ML Kit via `startIntentSenderForResult`
++ `OnActivityResult`), which also provides `PdfRenderer` page rendering at any DPI.
+The plugin is excluded from Android autolinking (`react-native.config.js`) and kept for iOS.
+
+### Device checklist (Milestone 4)
+- [ ] Scan document opens ML Kit (no NPE); first run may download the scanner module
+- [ ] Merge 3 PDFs in a custom order → page order correct in an external reader
+- [ ] Split `1-2, 3-` and Extract `2, 4` → correct pages; Every page on a 20-page PDF
+- [ ] Compress a scanned 10+ page PDF at each level → estimate close to actual; readable
+- [ ] Organise: rotate, delete, duplicate, reorder, extract; Save as copy and Replace; thumbnails update
+- [ ] Share and Save to device for results; password-protected PDF gives a clear error in every tool
 
 ## Milestone 5 — Advanced editing & OCR ⬜
 Annotation overlay (text, highlight, underline, strike-through, pen, shapes, date, images), signatures (draw/save), AcroForm filling (pdf-lib), offline OCR (ML Kit Latin + Devanagari) with progress, FTS search, searchable PDF (invisible text layer). Always saves an edited copy.

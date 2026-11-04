@@ -18,10 +18,16 @@
 └───────────────┬───────────────────────────────────────────────┬───────────────────────┘
                 ▼                                               ▼
 ┌──────── db/ (expo-sqlite) ────────┐               ┌──── native/ (adapters) ─────────┐
-│ migrations (PRAGMA user_version)  │               │ scanner/ contract (M2)          │
-│ documents · folders · settings    │               │ ocr/ (M5)                       │
+│ migrations (PRAGMA user_version)  │               │ scanner/ ML Kit / VisionKit     │
+│ documents · folders · settings    │               │ pdfRenderer/ PdfRenderer (And.) │
 └───────────────────────────────────┘               └─────────────────────────────────┘
 ```
+
+## Native code
+
+`modules/scanpilot-native` is a local Expo module (autolinked from `modules/`):
+Android ML Kit Document Scanner launch/result handling and `PdfRenderer` page
+rendering. JS wrappers: `src/native/scanner`, `src/native/pdfRenderer`.
 
 ## Principles
 

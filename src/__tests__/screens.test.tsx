@@ -52,9 +52,16 @@ describe('Home screen', () => {
     await waitFor(() => expect(importImagesAsPdf).toHaveBeenCalledTimes(1));
   });
 
-  it('marks unreleased tools as disabled rather than silently doing nothing', async () => {
+  it('enables the PDF toolkit and opens each tool', async () => {
     await render(<HomeScreen />);
-    expect(await screen.findByLabelText('Merge PDF, coming soon')).toBeDisabled();
+    const merge = await screen.findByLabelText('Merge PDF');
+    expect(merge).toBeEnabled();
+    await fireEvent.press(merge);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    expect(require('expo-router').router.push).toHaveBeenCalledWith({ pathname: '/tool/merge', params: {} });
+    await fireEvent.press(screen.getByLabelText('Split PDF'));
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    expect(require('expo-router').router.push).toHaveBeenCalledWith({ pathname: '/tool/split', params: {} });
     screen.getAllByLabelText('Import PDF').forEach((button) => expect(button).toBeEnabled());
   });
 });

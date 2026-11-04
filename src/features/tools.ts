@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 import type { IconName } from '@/components/ui';
 
 export type ToolId =
@@ -17,7 +19,10 @@ export interface ToolDefinition {
   label: string;
   description: string;
   icon: IconName;
-  /** Whether the tool works in this build. Unavailable tools render disabled with a "Soon" badge. */
+  /**
+   * Whether the tool works in this build. Unavailable tools render disabled with a "Soon" badge.
+   * Compression needs the Android page renderer (modules/scanpilot-native); iOS support is pending.
+   */
   available: boolean;
   milestone: number;
 }
@@ -30,10 +35,10 @@ export const TOOLS: readonly ToolDefinition[] = [
   { id: 'scan', label: 'Scan document', description: 'Camera scan with edge detection', icon: 'scan-outline', available: true, milestone: 2 },
   { id: 'import-pdf', label: 'Import PDF', description: 'Add PDFs from your device', icon: 'document-attach-outline', available: true, milestone: 1 },
   { id: 'import-images', label: 'Images to PDF', description: 'Turn photos into a PDF', icon: 'images-outline', available: true, milestone: 1 },
-  { id: 'merge', label: 'Merge PDF', description: 'Combine several PDFs', icon: 'git-merge-outline', available: false, milestone: 4 },
-  { id: 'split', label: 'Split PDF', description: 'Extract pages or ranges', icon: 'cut-outline', available: false, milestone: 4 },
-  { id: 'compress', label: 'Compress PDF', description: 'Reduce file size', icon: 'contract-outline', available: false, milestone: 4 },
-  { id: 'organize', label: 'Organise pages', description: 'Reorder, rotate, delete', icon: 'albums-outline', available: false, milestone: 4 },
+  { id: 'merge', label: 'Merge PDF', description: 'Combine several PDFs', icon: 'git-merge-outline', available: true, milestone: 4 },
+  { id: 'split', label: 'Split PDF', description: 'Extract pages or ranges', icon: 'cut-outline', available: true, milestone: 4 },
+  { id: 'compress', label: 'Compress PDF', description: 'Reduce file size', icon: 'contract-outline', available: Platform.OS === 'android', milestone: 4 },
+  { id: 'organize', label: 'Organise pages', description: 'Reorder, rotate, delete', icon: 'albums-outline', available: true, milestone: 4 },
   { id: 'ocr', label: 'Extract text', description: 'Offline OCR', icon: 'text-outline', available: false, milestone: 5 },
   { id: 'annotate', label: 'Annotate', description: 'Text, highlight, draw', icon: 'brush-outline', available: false, milestone: 5 },
   { id: 'sign', label: 'Sign', description: 'Add your signature', icon: 'pencil-outline', available: false, milestone: 5 },

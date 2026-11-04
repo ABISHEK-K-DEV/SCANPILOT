@@ -13,6 +13,7 @@ Offline-first document scanner & PDF editor. Expo SDK 58, React Native 0.88 (New
 - Always include loading, empty and error states. Icon-only controls need `accessibilityLabel`.
 - `expo-file-system` `File.write/move/copy` return promises — always await (lint enforces this).
 - In `app.json`, keep `react-native-document-scanner-plugin` **before** `expo-image-picker`: Info.plist mods run in reverse order, and image-picker (`cameraPermission: false`) would otherwise delete `NSCameraUsageDescription`.
+- Android native code lives in `modules/scanpilot-native` (Kotlin, Expo Modules API). It is compiled only by the GitHub Actions APK workflow — check that run after changing it.
 - Expo APIs change every SDK: check the installed package's `.d.ts` files rather than memory.
 
 ## Commands

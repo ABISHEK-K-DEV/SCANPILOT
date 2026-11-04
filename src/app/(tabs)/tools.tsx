@@ -3,8 +3,7 @@ import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { ToolTile } from '@/components/documents/ToolTile';
 import { AppText, Screen, SectionHeader } from '@/components/ui';
 import { type ToolDefinition, type ToolId, TOOLS } from '@/features/tools';
-import { useImportActions } from '@/hooks/useImportActions';
-import { useScanFlow } from '@/hooks/useScanFlow';
+import { useToolLauncher } from '@/hooks/useToolLauncher';
 import { useAppTheme } from '@/theme';
 
 const GROUPS: { title: string; ids: ToolId[] }[] = [
@@ -16,17 +15,12 @@ const GROUPS: { title: string; ids: ToolId[] }[] = [
 export default function ToolsScreen() {
   const { spacing } = useAppTheme();
   const { width } = useWindowDimensions();
-  const importer = useImportActions();
-  const scanner = useScanFlow();
+  const tools = useToolLauncher();
   const contentWidth = Math.min(width, 820) - spacing.lg * 2;
   const columns = contentWidth >= 560 ? 3 : 2;
   const tileWidth = (contentWidth - spacing.md * (columns - 1)) / columns;
 
-  const run = (t: ToolDefinition) => {
-    if (t.id === 'scan') scanner.startScan();
-    if (t.id === 'import-pdf') void importer.importPdf();
-    if (t.id === 'import-images') void importer.importImages();
-  };
+  const run = (t: ToolDefinition) => tools.launch(t.id);
 
   return (
     <Screen scroll>
@@ -49,8 +43,7 @@ export default function ToolsScreen() {
           </View>
         </View>
       ))}
-      {importer.overlay}
-      {scanner.overlay}
+      {tools.overlays}
     </Screen>
   );
 }

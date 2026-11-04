@@ -36,6 +36,12 @@ export class ScannerError extends Error {
 
 /** Maps native failures to messages a non-technical user can act on. */
 export function friendlyScannerError(raw: string, code?: string): ScannerError {
+  if (/download/i.test(raw)) {
+    return new ScannerError(
+      'Google Play services is still downloading the document scanner. Please try again in a minute (keep the internet on for this one-time download).',
+      'failed',
+    );
+  }
   if (code === 'ERR_SCANNER_UNAVAILABLE' || /play services|google play|unavailable|not available|gms|api.*disconnected/i.test(raw)) {
     return new ScannerError(
       'The camera scanner needs an up-to-date Google Play services. Update it from the Play Store, or add pages from your photos instead.',

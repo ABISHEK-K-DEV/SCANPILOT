@@ -79,6 +79,28 @@ const shots = [
   ['22-scan-review-photo', '/scan/review?page=p3'],
   ['23-scan-presets', '/scan/review', async (p) => p.getByRole('button', { name: /^Receipt,/ }).click()],
   ['24-scan-add-pages', '/scan/review', async (p) => p.getByLabel('Add pages').last().click()],
+  ['27-merge', '/tool/merge?ids=doc-lease,doc-bill,doc-invoice'],
+  ['28-merge-select', '/tool/merge?ids=doc-lease', async (p) => p.getByLabel('Add', { exact: true }).click()],
+  ['29-split', '/tool/split?id=doc-tax', async (p) => p.getByLabel('Page ranges').fill('1-6, 7-12, 13-')],
+  ['30-split-extract', '/tool/split?id=doc-lease', async (p) => {
+    await p.getByRole('radio', { name: /^Extract pages/ }).click();
+    await p.getByLabel('Pages to extract').fill('1, 4-6');
+  }],
+  ['31-compress', '/tool/compress?id=doc-tax'],
+  ['32-organize', '/tool/organize?id=doc-lease', async (p) => {
+    await p.getByLabel('Page 2', { exact: true }).click();
+    await p.getByLabel('Page 5', { exact: true }).click();
+    await p.getByLabel('Right', { exact: true }).click();
+  }],
+  ['33-organize-save', '/tool/organize?id=doc-lease', async (p) => {
+    await p.getByLabel('Page 1', { exact: true }).click();
+    await p.getByLabel('Delete', { exact: true }).click();
+    await p.waitForTimeout(300);
+    await p.getByLabel('Page 3', { exact: true }).click();
+    await p.getByLabel('Left', { exact: true }).click();
+    await p.getByLabel('Save changes').click();
+  }],
+  ['34-document-menu', '/document/doc-lease', async (p) => p.getByLabel('More actions').click()],
   ['25-crop-editor', '/scan/crop?id=p3', dragCornersOntoPaper],
   ['26-crop-editor-dark', '/scan/crop?id=p3&theme=dark', dragCornersOntoPaper],
 ];

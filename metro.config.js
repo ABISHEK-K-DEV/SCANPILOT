@@ -36,6 +36,8 @@ if (process.env.SCANPILOT_DEMO === '1') {
     'services/thumbnails/thumbnailService': 'demo/thumbnailService.ts',
     'services/scan/pageProcessing': 'demo/pageProcessing.ts',
     'components/pdf/PdfViewer': 'demo/PdfViewer.tsx',
+    'services/tools/compressService': 'demo/compressService.ts',
+    'services/tools/organizeService': 'demo/organizeService.ts',
   };
   const upstream = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {

@@ -85,6 +85,10 @@ export default function RootLayout() {
           <Stack.Screen name="document/[id]" options={{ title: '' }} />
           <Stack.Screen name="folder/[id]" options={{ title: 'Folder' }} />
           <Stack.Screen name="folders" options={{ title: 'Folders' }} />
+          <Stack.Screen name="tool/merge" options={{ title: 'Merge PDFs' }} />
+          <Stack.Screen name="tool/split" options={{ title: 'Split PDF' }} />
+          <Stack.Screen name="tool/compress" options={{ title: 'Compress PDF' }} />
+          <Stack.Screen name="tool/organize" options={{ title: 'Organise pages' }} />
           <Stack.Screen name="scan/review" options={{ title: 'Review scan', gestureEnabled: false }} />
           <Stack.Screen
             name="scan/crop"
