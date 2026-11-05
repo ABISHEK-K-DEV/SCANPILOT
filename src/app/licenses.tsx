@@ -1,19 +1,16 @@
 import Constants from 'expo-constants';
-import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { AppText, Icon, type IconName, ListGroup, ListRow, Screen } from '@/components/ui';
+import { AppText, Icon, type IconName, Screen } from '@/components/ui';
 import {
   COPYRIGHT,
   LICENSE_CONDITIONS,
-  LICENSE_LIMITATIONS,
   LICENSE_NAME,
   LICENSE_PERMISSIONS,
   LICENSE_SPDX,
   LICENSE_SUMMARY,
   LICENSE_TEXT,
 } from '@/features/appLicense';
-import { LICENSES } from '@/features/licenses';
 import { elevation, useAppTheme } from '@/theme';
 
 function TermColumn({ title, items, icon, color }: { title: string; items: readonly string[]; icon: IconName; color: string }) {
@@ -37,7 +34,6 @@ function TermColumn({ title, items, icon, color }: { title: string; items: reado
 
 export default function LicensesScreen() {
   const { colors, spacing, radius, dark } = useAppTheme();
-  const [showThirdParty, setShowThirdParty] = useState(false);
   const version = Constants.expoConfig?.version ?? '—';
   const card = [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, borderRadius: radius.lg, padding: spacing.lg }, !dark && elevation.card];
 
@@ -60,12 +56,21 @@ export default function LicensesScreen() {
             {LICENSE_SUMMARY}
           </AppText>
           <View style={[styles.divider, { backgroundColor: colors.border, marginVertical: spacing.lg }]} />
-          <View style={[styles.columns, { gap: spacing.lg }]}>
-            <TermColumn title="Permissions" items={LICENSE_PERMISSIONS} icon="checkmark" color={colors.success} />
-            <TermColumn title="Limitations" items={LICENSE_LIMITATIONS} icon="close" color={colors.danger} />
+          <AppText variant="label" tone="subtle" style={[styles.upper, { marginBottom: spacing.sm }]}>
+            You may
+          </AppText>
+          <View style={[styles.chips, { gap: spacing.sm }]}>
+            {LICENSE_PERMISSIONS.map((item) => (
+              <View key={item} style={[styles.chip, { backgroundColor: colors.successSoft, borderRadius: radius.pill }]}>
+                <Icon name="checkmark" size={14} color={colors.success} strokeWidth={2.4} />
+                <AppText variant="caption" color={colors.success} style={styles.chipText}>
+                  {item}
+                </AppText>
+              </View>
+            ))}
           </View>
           <View style={{ marginTop: spacing.lg }}>
-            <TermColumn title="Conditions" items={LICENSE_CONDITIONS} icon="information-circle-outline" color={colors.primary} />
+            <TermColumn title="Condition" items={LICENSE_CONDITIONS} icon="information-circle-outline" color={colors.primary} />
           </View>
         </View>
 
@@ -83,42 +88,6 @@ export default function LicensesScreen() {
           </View>
         </View>
 
-        <ListGroup title="Acknowledgements" footer="ScanPilot is built on free software. Each component keeps its own licence.">
-          <ListRow
-            icon="code-slash-outline"
-            title="Third-party components"
-            value={`${LICENSES.length}`}
-            onPress={() => setShowThirdParty((v) => !v)}
-            trailing={<Icon name={showThirdParty ? 'chevron-up' : 'chevron-down'} size={17} color={colors.textSubtle} />}
-            showChevron={false}
-          />
-          {showThirdParty
-            ? LICENSES.map((entry) => (
-                <Pressable
-                  key={entry.name}
-                  onPress={() => void Linking.openURL(entry.url)}
-                  accessibilityRole="link"
-                  accessibilityLabel={`${entry.name}, ${entry.license}`}
-                  accessibilityHint="Opens the project page"
-                  style={({ pressed }) => [styles.dep, { paddingHorizontal: spacing.lg, gap: spacing.md }, pressed && { backgroundColor: colors.surfacePressed }]}
-                >
-                  <View style={styles.flex}>
-                    <AppText variant="body" numberOfLines={2}>
-                      {entry.name}
-                    </AppText>
-                    <AppText variant="caption" tone="muted" numberOfLines={1}>
-                      {entry.usage}
-                    </AppText>
-                  </View>
-                  <View style={[styles.pill, { backgroundColor: colors.surfaceAlt, borderRadius: radius.pill }]}>
-                    <AppText variant="label" tone="muted" numberOfLines={1}>
-                      {entry.license}
-                    </AppText>
-                  </View>
-                </Pressable>
-              ))
-            : null}
-        </ListGroup>
       </View>
     </Screen>
   );
@@ -130,10 +99,10 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   badge: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   divider: { height: StyleSheet.hairlineWidth },
-  columns: { flexDirection: 'row' },
   column: { flex: 1 },
   term: { flexDirection: 'row', alignItems: 'center' },
   upper: { textTransform: 'uppercase' },
-  dep: { flexDirection: 'row', alignItems: 'center', minHeight: 60, paddingVertical: 10 },
-  pill: { paddingHorizontal: 8, paddingVertical: 3, maxWidth: 150 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 6 },
+  chipText: { fontWeight: '600' },
 });

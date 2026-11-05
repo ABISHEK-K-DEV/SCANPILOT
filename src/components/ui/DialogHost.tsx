@@ -57,21 +57,21 @@ function Dialog({ dialog }: { dialog: DialogRequest }) {
             !dark && elevation.raised,
           ]}
         >
-          <Pressable accessible={false} onPress={() => undefined} style={{ gap: spacing.md }}>
-            <View style={[styles.badge, { backgroundColor: toneSoft, borderRadius: radius.md + 2 }]}>
-              <Icon name={TONE_ICON[dialog.tone]} size={22} color={toneColor} />
+          <Pressable accessible={false} onPress={() => undefined} style={[styles.content, { gap: spacing.md }]}>
+            <View style={[styles.badge, { backgroundColor: toneSoft }]}>
+              <Icon name={TONE_ICON[dialog.tone]} size={24} color={toneColor} />
             </View>
-            <View style={{ gap: spacing.xs }}>
-              <AppText variant="heading" style={styles.title}>
+            <View style={[styles.copy, { gap: 6 }]}>
+              <AppText variant="heading" align="center" style={styles.title}>
                 {dialog.title}
               </AppText>
               {dialog.message ? (
-                <AppText tone="muted" style={styles.message}>
+                <AppText tone="muted" align="center" style={styles.message}>
                   {dialog.message}
                 </AppText>
               ) : null}
             </View>
-            <View style={[stacked ? styles.stack : styles.row, { gap: spacing.sm, marginTop: spacing.sm }]}>
+            <View style={[stacked ? styles.stack : styles.row, styles.buttons, { gap: spacing.sm, marginTop: spacing.sm }]}>
               {(stacked ? [...ordered].reverse() : ordered).map((button) => {
                 const isCancel = button.style === 'cancel';
                 const destructive = button.style === 'destructive';
@@ -168,13 +168,16 @@ export function DialogHost() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
-  card: { width: '100%', maxWidth: 360 },
-  badge: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 17, lineHeight: 23 },
+  card: { width: '100%', maxWidth: 340 },
+  content: { alignItems: 'center' },
+  copy: { alignSelf: 'stretch', alignItems: 'center' },
+  buttons: { alignSelf: 'stretch' },
+  badge: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, lineHeight: 24 },
   message: { fontSize: 14.5, lineHeight: 21 },
   row: { flexDirection: 'row' },
   stack: { flexDirection: 'column' },
-  button: { minHeight: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
+  button: { minHeight: 50, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 16 },
   toast: { position: 'absolute', alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 12, maxWidth: '88%' },
   toastText: { fontSize: 14, flexShrink: 1 },
 });

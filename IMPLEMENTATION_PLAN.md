@@ -106,7 +106,7 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Onboarding**: swipeable three-step introduction with illustrated scenes, animated dots and Continue → Get started.
 - **Home**: ink scanner hero, Import PDF / JPG to PDF cards, 4-column quick tools; Tools tab is a two-column card grid; Settings opens with a library summary; tab bar uses a pill indicator.
 - **Scan review**: labelled toolbar tiles, dashed "Add" page tile, sticky Add + Save bar.
-- **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (permissions / conditions / limitations) and full text; third-party acknowledgements are collapsed beneath it (their notices must still be shipped).
+- **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (what you may do, the one condition) and the full text. Third-party licences are listed in `THIRD_PARTY_NOTICES.md`.
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
 ### Camera permission fix (found on a real device)

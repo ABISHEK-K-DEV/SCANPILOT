@@ -11,7 +11,6 @@ export const LICENSE_SUMMARY =
 
 export const LICENSE_PERMISSIONS = ['Commercial use', 'Modification', 'Distribution', 'Private use'] as const;
 export const LICENSE_CONDITIONS = ['Include the copyright and licence notice'] as const;
-export const LICENSE_LIMITATIONS = ['No liability', 'No warranty'] as const;
 
 export const LICENSE_TEXT = `MIT License
 

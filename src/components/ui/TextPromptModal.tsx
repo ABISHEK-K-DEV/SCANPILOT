@@ -78,7 +78,9 @@ function PromptBody({
               !dark && elevation.raised,
             ]}
           >
-            <AppText variant="heading">{title}</AppText>
+            <AppText variant="heading" style={styles.title}>
+              {title}
+            </AppText>
             {message ? <AppText tone="muted">{message}</AppText> : null}
             <TextInput
               value={value}
@@ -114,9 +116,16 @@ function PromptBody({
                 {error}
               </AppText>
             ) : null}
-            <View style={[styles.actions, { gap: spacing.sm }]}>
-              <Button label="Cancel" variant="ghost" onPress={onCancel} compact />
-              <Button label={confirmLabel} onPress={submit} loading={busy} compact />
+            <View style={[styles.actions, { gap: spacing.sm, marginTop: spacing.xs }]}>
+              <Pressable
+                onPress={onCancel}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+                style={({ pressed }) => [styles.cancel, { borderRadius: radius.md + 2, backgroundColor: colors.surfaceAlt, opacity: pressed ? 0.85 : 1 }]}
+              >
+                <AppText variant="bodyStrong">Cancel</AppText>
+              </Pressable>
+              <Button label={confirmLabel} onPress={submit} loading={busy} style={styles.flex} />
             </View>
           </Pressable>
         </Pressable>
@@ -127,7 +136,9 @@ function PromptBody({
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   backdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  panel: { width: '100%', maxWidth: 420 },
+  panel: { width: '100%', maxWidth: 380 },
   input: { minHeight: 50, borderWidth: 1 },
-  actions: { flexDirection: 'row', justifyContent: 'flex-end' },
+  actions: { flexDirection: 'row' },
+  cancel: { flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center' },
+  title: { fontSize: 18, lineHeight: 24 },
 });
