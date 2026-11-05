@@ -7,6 +7,9 @@ mkdir -p e2e-results
 adb wait-for-device
 adb install -r -g "$APK"            # -g grants the camera permission up front
 adb logcat -c
+# Let the freshly booted emulator settle and close any system dialogs first.
+adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
+sleep 10
 status=0
 maestro test .maestro/smoke.yaml --format junit --output e2e-results/report.xml || status=$?
 adb logcat -d > e2e-results/logcat.txt

@@ -4,8 +4,24 @@ appId: app.scanpilot
 ---
 - launchApp:
     clearState: true
+# A slow CI emulator sometimes shows a system "isn't responding" dialog for
+# the launcher over the app; dismiss it (Wait) so it does not hide the screen.
+- runFlow:
+    when:
+      visible: ".*isn't responding"
+    commands:
+      - tapOn: "Wait"
 
 # Introduction
+- extendedWaitUntil:
+    visible: "Paper to PDF in seconds"
+    timeout: 30000
+    optional: true
+- runFlow:
+    when:
+      visible: ".*isn't responding"
+    commands:
+      - tapOn: "Wait"
 - extendedWaitUntil:
     visible: "Paper to PDF in seconds"
     timeout: 60000
