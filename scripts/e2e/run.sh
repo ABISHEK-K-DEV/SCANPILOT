@@ -10,6 +10,9 @@ adb logcat -c
 status=0
 maestro test .maestro/smoke.yaml --format junit --output e2e-results/report.xml || status=$?
 adb logcat -d > e2e-results/logcat.txt
+echo "::group::Camera used"
+grep -E "ScanPilotCamera|ScanPilot live camera" e2e-results/logcat.txt | tail -20 || true
+echo "::endgroup::"
 if [ "$status" -ne 0 ]; then
   # Make failures readable straight from the job log.
   echo "::group::Screen text at failure"
