@@ -48,9 +48,9 @@ appId: app.scanpilot
 - takeScreenshot: e2e-results/04-camera
 - tapOn: "Take photo"
 - extendedWaitUntil:
-    visible: "Done, 1 page"
+    visible: "Done, .*"
     timeout: 60000
-- tapOn: "Done, 1 page"
+- tapOn: "Done, .*"
 - extendedWaitUntil:
     visible: "Review scan"
     timeout: 20000

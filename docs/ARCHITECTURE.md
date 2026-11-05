@@ -37,7 +37,9 @@ rendering. JS wrappers: `src/native/scanner`, `src/native/pdfRenderer`.
    unchanged in React Native, on the web, and in Jest.
 3. **Native code behind adapters.** Screens import `services/*` or
    `native/*` interfaces, never a native SDK, so Expo Go / web degrade gracefully
-   and implementations can be swapped (ML Kit ↔ VisionCamera, ML Kit OCR ↔ Tesseract).
+   and implementations can be swapped (ML Kit ↔ VisionCamera, ML Kit OCR ↔ Tesseract). Example: `native/camera/documentCamera.tsx`
+   wraps ScanPilot's own CameraX view (live frames → JS detector); when it is
+   missing (iOS, web, old builds) the camera screen falls back to expo-camera.
 4. **Never destroy originals.** Edits write new files atomically
    (temp file → move); encrypted PDFs are refused for modification.
 5. **Reactive without duplication.** Mutations call `notifyLibraryChanged()`,

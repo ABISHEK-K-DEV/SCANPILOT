@@ -53,3 +53,12 @@ export function choosePictureSize(sizes: readonly string[], minLongEdge = 2600):
   const pool = fourThree.length > 0 ? fourThree : big;
   return pool.sort((a, b) => a.w * a.h - b.w * b.h)[0].s;
 }
+
+/** Live video frames arrive ~8× a second: steady for ≈0.7 s before capturing. */
+export const LIVE_STEADY_FRAMES = 6;
+
+/** Eases the drawn outline towards the newest detection so it glides instead of jittering. */
+export function smoothQuad(previous: Quad | null, next: Quad, amount = 0.55): Quad {
+  if (!previous) return next;
+  return next.map((p, i) => ({ x: previous[i].x + (p.x - previous[i].x) * amount, y: previous[i].y + (p.y - previous[i].y) * amount })) as Quad;
+}

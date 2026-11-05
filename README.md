@@ -38,7 +38,7 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Native PDF viewer with page indicator, password-protected PDF support, page-count backfill.
 * Document actions: share, save to device (Android folder picker), rename, favourite, move, duplicate, delete.
 * Every push to `main` is installed and exercised on an Android 14 emulator (Maestro), failing on any crash.
-* Auto capture with a live page outline (or manual); searchable scans (OCR on save); filters for one page or all pages; layouts that fit small phones and large fonts.
+* Smooth auto capture (Android: native CameraX live-frame analysis, no preview freezes) with a live page outline (or manual); searchable scans (OCR on save); filters for one page or all pages; layouts that fit small phones and large fonts.
 * Release-ready Android builds: no internet permission, upload-key signing and a Play Store AAB from CI (`docs/RELEASE.md`, `docs/PRIVACY_POLICY.md`).
 * Edge detection that also handles white paper on light backgrounds.
 * New aurora app icon; animated scanning (sweeping scan line, photos flying into the page stack); animated "How it works" guides for every tool (first use, the ? button, Settings → Tool guides).

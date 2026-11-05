@@ -8,9 +8,11 @@ import Svg, { Polygon } from 'react-native-svg';
 
 import { AppText, Button, Icon, type IconName } from '@/components/ui';
 import { CameraView, type FlashMode, useCameraPermissions } from '@/native/camera';
+import { decodeBase64, type DocumentCameraHandle, type DocumentFrame, NativeDocumentCamera } from '@/native/camera/documentCamera';
+import { detectDocumentQuad } from '@/services/scan/detect';
 import { hasCameraRequest, resolveCameraRequest } from '@/services/scan/cameraBridge';
 import { type ScanMode, SCAN_MODES, captureHint, scanMode } from '@/services/scan/modes';
-import { choosePictureSize, nextSteady, photoToPreview, STEADY_FRAMES } from '@/services/scan/autoCapture';
+import { choosePictureSize, LIVE_STEADY_FRAMES, nextSteady, photoToPreview, smoothQuad, STEADY_FRAMES } from '@/services/scan/autoCapture';
 import type { Quad } from '@/services/scan/geometry';
 import { autoCropPage, deleteFileQuietly, detectQuadInImage, filterImage, ingestImage, processCapturedPage, splitSpread } from '@/services/scan/pageProcessing';
 import { pickPages } from '@/services/scan/scanService';
@@ -33,6 +35,7 @@ import { appAlert } from '@/stores/dialogStore';
 type Mode = 'new' | 'append' | 'replace' | 'return';
 
 const DEMO = process.env.EXPO_PUBLIC_SCANPILOT_DEMO === '1';
+const LiveCamera = NativeDocumentCamera;
 const MODE_ICON: Record<ScanMode, IconName> = { document: 'scan', whiteboard: 'whiteboard', book: 'book', 'id-card': 'id-card', 'business-card': 'contact' };
 const INK = '#0B0D12';
 const FLASH_ORDER: FlashMode[] = ['off', 'auto', 'on'];
@@ -125,6 +128,9 @@ export default function CameraScreen() {
     return () => sub.remove();
   }, [getPermission]);
   const camera = useRef<CameraView>(null);
+  // Live CameraX camera with continuous frame analysis (Android); expo-camera elsewhere.
+  const liveCam = useRef<DocumentCameraHandle>(null);
+  const liveCamera = NativeDocumentCamera !== null && !DEMO;
   const [ready, setReady] = useState(DEMO);
   const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
   const [flash, setFlash] = useState<FlashMode>('off');
@@ -242,7 +248,9 @@ export default function CameraScreen() {
         flyAway('/demo-assets/scan/page-2.jpg');
         await enqueue(() => processPhoto('/demo-assets/scan/page-2.jpg', captureMode));
       } else {
-        const photo = await withCamera(() => camera.current?.takePictureAsync({ quality: 0.92, exif: false }) ?? Promise.resolve(undefined));
+        const photo = await withCamera(() =>
+          liveCamera ? (liveCam.current?.takePicture() ?? Promise.resolve(undefined)) : (camera.current?.takePictureAsync({ quality: 0.92, exif: false }) ?? Promise.resolve(undefined)),
+        );
         if (!photo) return;
         flyAway(photo.uri);
         const task = enqueue(() => processPhoto(photo.uri, captureMode, photo.width, photo.height));
@@ -271,7 +279,7 @@ export default function CameraScreen() {
    * held still for STEADY_FRAMES snapshots. Then pause briefly for the next page.
    */
   useEffect(() => {
-    if (!autoActive) return;
+    if (!autoActive || liveCamera) return;
     let cancelled = false;
     // Waits end immediately when the screen closes, so no timers outlive it.
     const pending = new Set<{ timer: ReturnType<typeof setTimeout>; resolve: () => void }>();
@@ -333,6 +341,48 @@ export default function CameraScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoActive, captureMode]);
+
+  // Live frames (native camera): detect on every frame, glide the outline, capture when steady.
+  const liveTrack = useRef<{ last: Quad | null; count: number; smooth: Quad | null; coolUntil: number }>({ last: null, count: 0, smooth: null, coolUntil: 0 });
+  const onLiveFrame = (frame: DocumentFrame) => {
+    if (!autoActive || busyRef.current) return;
+    const t = liveTrack.current;
+    if (Date.now() < t.coolUntil) return;
+    let quad: Quad | null = null;
+    try {
+      quad = detectDocumentQuad(decodeBase64(frame.gray), frame.width, frame.height)?.quad ?? null;
+    } catch {
+      quad = null;
+    }
+    t.count = nextSteady(t.last, quad, t.count, Math.max(frame.width, frame.height));
+    t.last = quad;
+    t.smooth = quad ? smoothQuad(t.smooth, quad) : null;
+    setLive(t.smooth ? { quad: t.smooth, width: frame.width, height: frame.height } : null);
+    setSteady(Math.min(1, t.count / LIVE_STEADY_FRAMES));
+    if (!quad || t.count < LIVE_STEADY_FRAMES) return;
+    // Steady: take one full-resolution photo, then give the user time to change page.
+    t.count = 0;
+    t.last = null;
+    t.smooth = null;
+    t.coolUntil = Date.now() + 1800;
+    setLive(null);
+    setSteady(0);
+    busyRef.current = true;
+    void (async () => {
+      try {
+        const photo = await withCamera(() => liveCam.current?.takePicture() ?? Promise.resolve(undefined));
+        if (!photo) return;
+        flashOverlay.setValue(1);
+        Animated.timing(flashOverlay, { toValue: 0, duration: 260, useNativeDriver: true }).start();
+        flyAway(photo.uri);
+        void enqueue(() => processPhoto(photo.uri, captureMode, photo.width, photo.height));
+      } catch {
+        // Missed this one; detection continues.
+      } finally {
+        busyRef.current = false;
+      }
+    })();
+  };
 
   useEffect(() => {
     if (pages.length === 0) return;
@@ -442,6 +492,16 @@ export default function CameraScreen() {
       <View style={styles.fill} onLayout={(e) => setStageSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}>
         {DEMO ? (
           <Image source={{ uri: '/demo-assets/scan/photo-3.jpg' }} style={StyleSheet.absoluteFill} contentFit="cover" />
+        ) : liveCamera && LiveCamera ? (
+          <LiveCamera
+            ref={liveCam}
+            style={StyleSheet.absoluteFill}
+            flash={flash === 'on' || flash === 'auto' ? flash : 'off'}
+            analysis={autoActive}
+            onCameraReady={() => setReady(true)}
+            onFrame={(e) => onLiveFrame(e.nativeEvent)}
+            onCameraError={(e) => appAlert('Camera problem', e.nativeEvent.message)}
+          />
         ) : (
           <CameraView
             ref={camera}

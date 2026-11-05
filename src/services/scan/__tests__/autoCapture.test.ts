@@ -1,4 +1,4 @@
-import { choosePictureSize, nextSteady, photoToPreview, quadsClose, STEADY_FRAMES } from '../autoCapture';
+import { choosePictureSize, LIVE_STEADY_FRAMES, nextSteady, smoothQuad, photoToPreview, quadsClose, STEADY_FRAMES } from '../autoCapture';
 import type { Quad } from '../geometry';
 
 const q = (dx = 0): Quad => [
@@ -35,5 +35,14 @@ describe('auto-capture', () => {
     expect(choosePictureSize(['1920x1080', '1280x720'])).toBe('1920x1080'); // nothing big enough: the largest
     expect(choosePictureSize(['3840x2160', '4000x2250'])).toBe('3840x2160'); // no 4:3: smallest big one
     expect(choosePictureSize(['Photo'])).toBeUndefined();
+  });
+
+  it('smooths the live outline and needs ~0.7 s of steady frames', () => {
+    const a = q();
+    const b = q(100);
+    const mid = smoothQuad(a, b, 0.5);
+    expect(mid[0].x).toBe(150);
+    expect(smoothQuad(null, b)).toBe(b);
+    expect(LIVE_STEADY_FRAMES).toBeGreaterThanOrEqual(5);
   });
 });

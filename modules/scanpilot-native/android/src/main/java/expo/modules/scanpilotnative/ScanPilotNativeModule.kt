@@ -49,6 +49,15 @@ class ScanPilotNativeModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("ScanPilotNative")
 
+    // Live document camera: continuous frame analysis + full-resolution capture (CameraX).
+    View(DocumentCameraView::class) {
+      Events("onCameraReady", "onFrame", "onCameraError")
+      Prop("flash") { view: DocumentCameraView, mode: String? -> view.setFlash(mode ?: "off") }
+      Prop("analysis") { view: DocumentCameraView, enabled: Boolean? -> view.analysisEnabled = enabled ?: true }
+      AsyncFunction("takePicture") { view: DocumentCameraView, promise: Promise -> view.takePicture(promise) }
+      OnViewDestroys { view: DocumentCameraView -> view.release() }
+    }
+
     AsyncFunction("scanDocument") { options: ScanOptions, promise: Promise ->
       if (pendingScan != null) {
         promise.reject("ERR_SCAN_IN_PROGRESS", "A scan is already in progress.", null)
