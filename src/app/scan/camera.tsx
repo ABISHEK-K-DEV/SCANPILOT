@@ -138,7 +138,10 @@ export default function CameraScreen() {
   const [ready, setReady] = useState(DEMO);
   useEffect(() => {
     if (!liveCamera || ready) return;
-    const timer = setTimeout(() => setLiveFailed(true), LIVE_START_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      console.warn('ScanPilot live camera did not start; using expo-camera');
+      setLiveFailed(true);
+    }, LIVE_START_TIMEOUT_MS);
     return () => clearTimeout(timer);
   }, [liveCamera, ready]);
   const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
@@ -516,7 +519,8 @@ export default function CameraScreen() {
             analysis={autoActive}
             onCameraReady={() => setReady(true)}
             onFrame={(e) => onLiveFrame(e.nativeEvent)}
-            onCameraError={() => {
+            onCameraError={(e) => {
+              console.warn(`ScanPilot live camera error: ${e.nativeEvent.message}; using expo-camera`);
               setReady(false);
               setLiveFailed(true);
             }}

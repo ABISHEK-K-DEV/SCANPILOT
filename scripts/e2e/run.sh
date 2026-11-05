@@ -16,7 +16,7 @@ if [ "$status" -ne 0 ]; then
   maestro hierarchy 2>/dev/null | grep -oE '"(text|accessibilityText)" *: *"[^"]+"' | head -60
   echo "::endgroup::"
   echo "::group::App log (errors, JS, camera)"
-  grep -v " Maestro " e2e-results/logcat.txt | grep -E "ReactNativeJS|AndroidRuntime|ExpoModulesCore|ScanPilotCamera|CameraX|Camera2|app\.scanpilot" | tail -150
+  grep -v -E " Maestro |CompositionEngine|UiDevice" e2e-results/logcat.txt | grep -E "ReactNativeJS|AndroidRuntime|ExpoModulesCore|ScanPilotCamera|CameraX|Camera2|app\.scanpilot" | tail -150
   echo "::endgroup::"
 fi
 if grep -E "FATAL EXCEPTION|ANR in app\.scanpilot" -A 30 e2e-results/logcat.txt | grep -q "app.scanpilot"; then

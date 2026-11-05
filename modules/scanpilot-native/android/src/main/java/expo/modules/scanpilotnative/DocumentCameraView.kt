@@ -86,7 +86,28 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
   }
 
   override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+    previewView.measure(
+      MeasureSpec.makeMeasureSpec(right - left, MeasureSpec.EXACTLY),
+      MeasureSpec.makeMeasureSpec(bottom - top, MeasureSpec.EXACTLY),
+    )
     previewView.layout(0, 0, right - left, bottom - top)
+  }
+
+  // React Native does not lay out views that native code adds later. PreviewView
+  // adds its TextureView only once the camera starts, so without this it stays
+  // 0×0 and the camera never streams.
+  private val measureAndLayout = Runnable {
+    measure(
+      MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+      MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY),
+    )
+    layout(left, top, right, bottom)
+  }
+
+  override fun requestLayout() {
+    super.requestLayout()
+    @Suppress("SENSELESS_COMPARISON")
+    if (measureAndLayout != null) post(measureAndLayout)
   }
 
   override fun onAttachedToWindow() {
@@ -189,6 +210,7 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
         if (settled || attempt != bindGeneration || value != PreviewView.StreamState.STREAMING) return
         settled = true
         streamState.removeObserver(this)
+        Log.i(TAG, "Camera configuration ${index + 1} streaming")
         onCameraReady(mapOf("ready" to true))
       }
     }
