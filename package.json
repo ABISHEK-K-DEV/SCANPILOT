@@ -76,10 +76,11 @@
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run licenses:check",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run licenses:check && node scripts/generate-notices.js --check",
     "licenses:check": "node scripts/check-licenses.js",
     "test:pdf-readers": "PDF_EXPORT_DIR=.pdf-samples jest exportSamples && python3 scripts/verify-pdfs.py .pdf-samples",
-    "screenshots": "node scripts/screenshots/capture.mjs"
+    "screenshots": "node scripts/screenshots/capture.mjs",
+    "notices": "node scripts/generate-notices.js"
   },
   "private": true,
   "jest": {

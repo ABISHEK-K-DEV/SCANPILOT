@@ -6,10 +6,18 @@ typecheck + tests → `expo prebuild` → Gradle release build → artifacts.
 * Release builds are **offline**: `SCANPILOT_OFFLINE=1` removes `android.permission.INTERNET`
   (`app.config.js`). Local `npx expo run:android` builds keep it, because Metro needs it.
 * `versionCode` = the workflow run number, so every upload to Play is accepted.
+* Per-architecture APKs: `ScanPilot-…apk` (arm64 — almost every phone), `…-universal.apk` (any phone).
+* After the build, the **e2e** job installs the x86_64 APK on an Android 14 emulator and runs
+  `.maestro/smoke.yaml` (introduction → Home → a tool + guide → camera → review → save with OCR →
+  Files → Settings → Licence). Any crash fails the run; screenshots and logcat are in the
+  `ScanPilot-e2e-results` artifact.
 * Without signing secrets the APK is signed with the public **debug** key — fine for
   sideloading and testing, **not** accepted by Google Play.
 
 ## One-time: create your upload key
+
+**Easiest:** on your computer run `bash scripts/create-upload-key.sh`. It creates the key and — if the
+GitHub CLI (`gh`) is logged in — stores the four secrets for you. Otherwise do it by hand:
 
 Keep the keystore and passwords safe and backed up. Losing them means you cannot update the app.
 

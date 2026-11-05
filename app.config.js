@@ -4,6 +4,7 @@
  *                          (set by CI; local dev builds need it for Metro)
  *  - SCANPILOT_VERSION_CODE  Android versionCode (CI uses the run number)
  *  - release signing from the upload key, see plugins/withReleaseSigning.js
+ *  - SCANPILOT_ABI_SPLITS=1  per-architecture APKs (CI; x86_64 runs the emulator tests)
  */
 module.exports = ({ config }) => {
   const offline = process.env.SCANPILOT_OFFLINE === '1';
@@ -15,6 +16,6 @@ module.exports = ({ config }) => {
       ...(versionCode ? { versionCode } : {}),
       blockedPermissions: [...(config.android?.blockedPermissions ?? []), ...(offline ? ['android.permission.INTERNET'] : [])],
     },
-    plugins: [...(config.plugins ?? []), './plugins/withReleaseSigning'],
+    plugins: [...(config.plugins ?? []), './plugins/withReleaseSigning', ...(process.env.SCANPILOT_ABI_SPLITS === '1' ? ['./plugins/withAbiSplits'] : [])],
   };
 };

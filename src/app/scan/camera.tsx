@@ -10,7 +10,7 @@ import { AppText, Button, Icon, type IconName } from '@/components/ui';
 import { CameraView, type FlashMode, useCameraPermissions } from '@/native/camera';
 import { hasCameraRequest, resolveCameraRequest } from '@/services/scan/cameraBridge';
 import { type ScanMode, SCAN_MODES, captureHint, scanMode } from '@/services/scan/modes';
-import { nextSteady, photoToPreview, STEADY_FRAMES } from '@/services/scan/autoCapture';
+import { choosePictureSize, nextSteady, photoToPreview, STEADY_FRAMES } from '@/services/scan/autoCapture';
 import type { Quad } from '@/services/scan/geometry';
 import { autoCropPage, deleteFileQuietly, detectQuadInImage, filterImage, ingestImage, processCapturedPage, splitSpread } from '@/services/scan/pageProcessing';
 import { pickPages } from '@/services/scan/scanService';
@@ -126,6 +126,7 @@ export default function CameraScreen() {
   }, [getPermission]);
   const camera = useRef<CameraView>(null);
   const [ready, setReady] = useState(DEMO);
+  const [pictureSize, setPictureSize] = useState<string | undefined>(undefined);
   const [flash, setFlash] = useState<FlashMode>('off');
   const [grid, setGrid] = useState(false);
   const [pages, setPages] = useState<ScanPage[]>([]);
@@ -319,7 +320,7 @@ export default function CameraScreen() {
         } finally {
           if (snapUri) deleteFileQuietly(snapUri);
         }
-        await sleep(220);
+        await sleep(60);
       }
     })();
     return () => {
@@ -442,7 +443,25 @@ export default function CameraScreen() {
         {DEMO ? (
           <Image source={{ uri: '/demo-assets/scan/photo-3.jpg' }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
-          <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" flash={flash} onCameraReady={() => setReady(true)} animateShutter={false} />
+          <CameraView
+            ref={camera}
+            style={StyleSheet.absoluteFill}
+            facing="back"
+            flash={flash}
+            pictureSize={pictureSize}
+            animateShutter={false}
+            onCameraReady={() => {
+              setReady(true);
+              // Capture at the size pages are stored at: faster snapshots, same page quality.
+              if (!pictureSize) {
+                // Not every device / platform implements it: fall back to the default size.
+                void Promise.resolve()
+                  .then(() => camera.current?.getAvailablePictureSizesAsync?.() ?? [])
+                  .then((sizes) => setPictureSize(choosePictureSize(sizes)))
+                  .catch(() => undefined);
+              }
+            }}
+          />
         )}
 
         {/* Rule-of-thirds grid */}

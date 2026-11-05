@@ -1,0 +1,79 @@
+# End-to-end smoke test on a real Android emulator (CI: .github/workflows/android-apk.yml).
+# Walks the main journeys of a fresh install; any crash fails the run (scripts/e2e/run.sh).
+appId: app.scanpilot
+---
+- launchApp:
+    clearState: true
+
+# Introduction
+- extendedWaitUntil:
+    visible: "Paper to PDF in seconds"
+    timeout: 60000
+- takeScreenshot: e2e-results/01-introduction
+- tapOn: "Continue"
+- tapOn: "Continue"
+- tapOn: "Get started"
+
+# Home
+- extendedWaitUntil:
+    visible: "Scan a document"
+    timeout: 20000
+- assertVisible: "Quick tools"
+- takeScreenshot: e2e-results/02-home
+
+# A tool, with its first-use guide
+- tapOn: "Tools"
+- assertVisible: "Merge PDF"
+- tapOn: "Merge PDF"
+- extendedWaitUntil:
+    visible: "HOW IT WORKS"
+    timeout: 10000
+- takeScreenshot: e2e-results/03-merge-guide
+- tapOn: "Got it"
+- assertVisible: "Combine several PDFs into one"
+- assertVisible: "Scan with camera"
+- back
+
+# Camera → review → save (camera permission granted at install with adb -g)
+- tapOn: "Home"
+- tapOn: "Scan document"
+- extendedWaitUntil:
+    visible: "HOW IT WORKS"
+    timeout: 15000
+- tapOn: "Got it"
+- extendedWaitUntil:
+    visible: "Manual capture"
+    timeout: 20000
+- tapOn: "Manual capture"
+- takeScreenshot: e2e-results/04-camera
+- tapOn: "Take photo"
+- extendedWaitUntil:
+    visible: "Done, 1 page"
+    timeout: 60000
+- tapOn: "Done, 1 page"
+- extendedWaitUntil:
+    visible: "Review scan"
+    timeout: 20000
+- tapOn: "Filter"
+- takeScreenshot: e2e-results/05-review-filter
+- tapOn: "Save PDF.*"
+- extendedWaitUntil:
+    visible: "Add pages"
+    timeout: 120000
+- takeScreenshot: e2e-results/06-document
+- back
+
+# Files, Settings, Licence
+- tapOn: "Files"
+- assertVisible: "Search documents"
+- tapOn: "Settings"
+- assertVisible: "Scanner"
+- scrollUntilVisible:
+    element: "Licence"
+    direction: DOWN
+- tapOn: "Licence.*"
+- assertVisible: "MIT License"
+- takeScreenshot: e2e-results/07-licence
+
+# The crash screen must never have appeared.
+- assertNotVisible: "This screen ran into a problem"

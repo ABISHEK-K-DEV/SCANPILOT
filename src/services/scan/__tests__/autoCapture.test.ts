@@ -1,4 +1,4 @@
-import { nextSteady, photoToPreview, quadsClose, STEADY_FRAMES } from '../autoCapture';
+import { choosePictureSize, nextSteady, photoToPreview, quadsClose, STEADY_FRAMES } from '../autoCapture';
 import type { Quad } from '../geometry';
 
 const q = (dx = 0): Quad => [
@@ -28,5 +28,12 @@ describe('auto-capture', () => {
     const out = photoToPreview([{ x: 0, y: 0 }, { x: 3000, y: 0 }, { x: 3000, y: 4000 }, { x: 0, y: 4000 }], { width: 3000, height: 4000 }, { width: 390, height: 600 });
     expect(out[0]).toEqual({ x: -30, y: 0 });
     expect(out[2]).toEqual({ x: 420, y: 600 });
+  });
+
+  it('picks the smallest 4:3 picture size that still covers the page resolution', () => {
+    expect(choosePictureSize(['4032x3024', '3264x2448', '2592x1944', '1920x1080', '4000x2250'])).toBe('3264x2448');
+    expect(choosePictureSize(['1920x1080', '1280x720'])).toBe('1920x1080'); // nothing big enough: the largest
+    expect(choosePictureSize(['3840x2160', '4000x2250'])).toBe('3840x2160'); // no 4:3: smallest big one
+    expect(choosePictureSize(['Photo'])).toBeUndefined();
   });
 });

@@ -5,6 +5,8 @@ import path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { applySigning } = require('../../plugins/withReleaseSigning') as { applySigning: (g: string) => string };
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const { applyAbiSplits } = require('../../plugins/withAbiSplits') as { applyAbiSplits: (g: string) => string };
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const appConfig = require('../../app.config') as (ctx: { config: Record<string, unknown> }) => {
   android: { blockedPermissions: string[]; versionCode?: number };
   plugins: unknown[];
@@ -39,6 +41,16 @@ describe('release signing plugin', () => {
   it('is idempotent and fails loudly on an unexpected template', () => {
     expect(applySigning(applySigning(TEMPLATE))).toBe(applySigning(TEMPLATE));
     expect(() => applySigning('android {}')).toThrow(/signingConfigs/);
+  });
+});
+
+describe('ABI splits plugin', () => {
+  it('adds per-ABI APKs once, including x86_64 for the emulator', () => {
+    const gradle = `apply plugin: "com.android.application"\nandroid {\n    namespace "app.scanpilot"\n}`;
+    const out = applyAbiSplits(gradle);
+    expect(out).toContain('include "arm64-v8a", "armeabi-v7a", "x86_64"');
+    expect(applyAbiSplits(out)).toBe(out);
+    expect(() => applyAbiSplits('nothing')).toThrow(/android/);
   });
 });
 

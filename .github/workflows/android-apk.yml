@@ -75,6 +75,7 @@ jobs:
         env:
           CI: '1'
           SCANPILOT_OFFLINE: '1'
+          SCANPILOT_ABI_SPLITS: '1'
           SCANPILOT_VERSION_CODE: ${{ github.run_number }}
 
       - name: Prepare upload key (if configured)
@@ -102,7 +103,7 @@ jobs:
           SCANPILOT_UPLOAD_KEY_PASSWORD: ${{ secrets.SCANPILOT_UPLOAD_KEY_PASSWORD }}
         run: >
           ./gradlew assembleRelease ${{ steps.signing.outputs.store && 'bundleRelease' || '' }} --no-daemon --stacktrace
-          -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+          -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
           -Pandroid.enableMinifyInReleaseBuilds=false
           -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g"
 
@@ -110,7 +111,13 @@ jobs:
         run: |
           VERSION=$(node -p "require('./app.json').expo.version")
           mkdir -p dist-apk
-          cp android/app/build/outputs/apk/release/app-release.apk "dist-apk/ScanPilot-${VERSION}-${GITHUB_SHA::7}.apk"
+          OUT=android/app/build/outputs/apk/release
+          ls -lh "$OUT"
+          # Most phones: arm64. Older 32-bit phones: universal (works everywhere, larger).
+          cp "$OUT/app-arm64-v8a-release.apk" "dist-apk/ScanPilot-${VERSION}-${GITHUB_SHA::7}.apk"
+          cp "$OUT/app-universal-release.apk" "dist-apk/ScanPilot-${VERSION}-${GITHUB_SHA::7}-universal.apk"
+          mkdir -p e2e-apk
+          cp "$OUT/app-x86_64-release.apk" e2e-apk/ScanPilot-x86_64.apk
           if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then
             cp android/app/build/outputs/bundle/release/app-release.aab "dist-apk/ScanPilot-${VERSION}-${GITHUB_SHA::7}.aab"
           fi
@@ -124,3 +131,57 @@ jobs:
             dist-apk/*.aab
           if-no-files-found: error
           retention-days: 30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ScanPilot-e2e-apk
+          path: e2e-apk/*.apk
+          retention-days: 3
+
+  # Installs the real release APK on an Android 14 emulator and walks the main
+  # journeys with Maestro (.maestro/smoke.yaml). Fails on any crash.
+  e2e:
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ScanPilot-e2e-apk
+          path: e2e-apk
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Run on the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back emulated
+          script: bash scripts/e2e/run.sh e2e-apk/ScanPilot-x86_64.apk
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ScanPilot-e2e-results
+          path: e2e-results/
+          retention-days: 14

@@ -27,7 +27,7 @@ jest.mock('@/native/camera', () => {
   const { View } = require('react-native');
   // eslint-disable-next-line react/display-name
   const CameraView = React.forwardRef(({ onCameraReady }: { onCameraReady?: () => void }, ref: unknown) => {
-    React.useImperativeHandle(ref, () => ({ takePictureAsync: async () => ({ uri: 'photo.jpg', width: 3000, height: 4000 }) }));
+    React.useImperativeHandle(ref, () => ({ takePictureAsync: async () => ({ uri: 'photo.jpg', width: 3000, height: 4000 }), getAvailablePictureSizesAsync: async () => ['4032x3024', '3264x2448'] }));
     React.useEffect(() => onCameraReady?.(), [onCameraReady]);
     return <View testID="camera" />;
   });

@@ -12,6 +12,8 @@ import {
   LICENSE_TEXT,
 } from '@/features/appLicense';
 import { elevation, useAppTheme } from '@/theme';
+// Third-party licence notices ship inside the app (required by their licences); not displayed.
+import '@/legal/thirdPartyNotices.generated';
 
 function TermColumn({ title, items, icon, color }: { title: string; items: readonly string[]; icon: IconName; color: string }) {
   const { spacing } = useAppTheme();

@@ -109,6 +109,13 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (what you may do, the one condition) and the full text. Third-party licences are listed in `THIRD_PARTY_NOTICES.md`.
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+## Faster capture, bundled notices, emulator tests ✅
+- **Faster auto-capture**: the camera captures at the smallest 4:3 size that still covers the stored page resolution (`choosePictureSize`, tested) and checks for the page continuously (≈60 ms between snapshots instead of 220 ms).
+- **Licence notices shipped in the app, not shown**: `npm run notices` collects the licence text of all 600+ production packages (230 distinct texts) plus native SDKs into `src/legal/thirdPartyNotices.generated.ts`, bundled with the app; `npm run verify` and a test fail if it goes stale.
+- **Upload key in one command**: `scripts/create-upload-key.sh` (keytool + optional `gh secret set`).
+- **Real Android in CI**: per-ABI APKs (arm64 for phones, universal, x86_64 for the emulator, `plugins/withAbiSplits.js`), and an `e2e` job running the release APK on an Android 14 emulator with Maestro (`.maestro/smoke.yaml`), failing on any crash.
+- VisionCamera 5 (frame processors) was evaluated: the best camera library, but it needs a new native stack (Nitro) and custom C++ frame-processor plugins — too risky to swap in without device testing. Revisit once the emulator suite is green.
+
 ## Auto-capture, live outline, searchable scans, small screens ✅
 - **Auto capture** (default; Manual/Auto switch in the camera and Settings): about once a second a silent snapshot is analysed with the on-device detector; the page outline is drawn live over the preview, and the snapshot becomes the page once the outline has held still for two snapshots (`services/scan/autoCapture.ts`, tested). Manual shutter and snapshots share one camera lock.
 - **Searchable scans (OCR on save)**, on by default (Review → Options, or Settings): pages are recognised on the phone and saved with an invisible text layer, and the text is indexed for library search. The document viewer's toolbar now has **Text** (Extract text).
