@@ -109,6 +109,12 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (what you may do, the one condition) and the full text. Third-party licences are listed in `THIRD_PARTY_NOTICES.md`.
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+## Auto-capture, live outline, searchable scans, small screens ✅
+- **Auto capture** (default; Manual/Auto switch in the camera and Settings): about once a second a silent snapshot is analysed with the on-device detector; the page outline is drawn live over the preview, and the snapshot becomes the page once the outline has held still for two snapshots (`services/scan/autoCapture.ts`, tested). Manual shutter and snapshots share one camera lock.
+- **Searchable scans (OCR on save)**, on by default (Review → Options, or Settings): pages are recognised on the phone and saved with an invisible text layer, and the text is indexed for library search. The document viewer's toolbar now has **Text** (Extract text).
+- **Filters for all pages**: the Filter tab has a clear *Apply to: This page / All N pages* switch (defaults to all pages), with per-page progress.
+- **Responsive layout**: camera frame sized to fit between the top bar and the hint on any screen; compact top bar and shutter on narrow phones; review screen tightens on short screens so the Save bar is always visible (checked at 360×640 and 320×568); text scaling capped (1.3×, buttons 1.2×) so large system fonts no longer cut buttons.
+
 ## Release readiness & robustness ✅
 - **Edge detection v2** (`services/scan/detect.ts`): when the page is not clearly brighter than the background (white paper on a light table), an edge method scans inward from each border for the first strong gradient, fits one line per side with RANSAC + least squares, and intersects them. Tested on synthetic low-contrast pages with text; ~2 px corner error on a white-on-white test image.
 - **Faster camera pipeline**: `processCapturedPage` decodes each photo once for detection → perspective fix → filter (previously decoded twice).

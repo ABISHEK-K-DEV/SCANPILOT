@@ -13,6 +13,10 @@ export interface AppSettings {
   /** Require fingerprint/face/PIN when opening the app. */
   appLock: boolean;
   scanner: ScannerPreference;
+  /** Camera captures by itself once the page is found and held still. */
+  autoCapture: boolean;
+  /** Recognise text when saving a scan: searchable, selectable PDF. */
+  scanOcr: boolean;
   /** Tool guides already shown (ids from features/toolGuides). */
   seenGuides: string[];
 }
@@ -24,5 +28,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   sort: { field: 'date', direction: 'desc' },
   appLock: false,
   scanner: 'camera',
+  autoCapture: true,
+  scanOcr: true,
   seenGuides: [],
 };

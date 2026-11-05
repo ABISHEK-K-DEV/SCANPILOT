@@ -85,7 +85,7 @@ export function Button({
         ) : icon ? (
           <Icon name={icon} size={iconSize} color={tone.fg} />
         ) : null}
-        <AppText variant="bodyStrong" color={tone.fg} numberOfLines={1} style={compact ? styles.compactLabel : undefined}>
+        <AppText variant="bodyStrong" color={tone.fg} numberOfLines={1} maxFontSizeMultiplier={1.2} style={[styles.label, compact ? styles.compactLabel : undefined]}>
           {label}
         </AppText>
         {trailingIcon && !loading ? <Icon name={trailingIcon} size={iconSize} color={tone.fg} /> : null}
@@ -96,6 +96,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: { alignItems: 'center', justifyContent: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: '100%' },
+  label: { flexShrink: 1 },
   compactLabel: { fontSize: 14 },
 });

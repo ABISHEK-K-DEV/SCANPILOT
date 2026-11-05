@@ -117,6 +117,20 @@ export default function SettingsScreen() {
             value={settings.scanner === 'camera' ? 'ScanPilot' : 'System'}
             onPress={() => setScannerSheet(true)}
           />
+          <ListRow
+            icon="camera"
+            title="Auto capture"
+            subtitle="Take the photo as soon as the page is found and held still"
+            trailing={<Switch value={settings.autoCapture} onValueChange={(v) => void update('autoCapture', v)} trackColor={{ true: colors.primary, false: colors.border }} accessibilityLabel="Auto capture" />}
+            showChevron={false}
+          />
+          <ListRow
+            icon="scan-text"
+            title="Searchable text (OCR)"
+            subtitle="Recognise the words when saving a scan, on this phone"
+            trailing={<Switch value={settings.scanOcr} onValueChange={(v) => void update('scanOcr', v)} trackColor={{ true: colors.primary, false: colors.border }} accessibilityLabel="Searchable text when saving scans" />}
+            showChevron={false}
+          />
         </ListGroup>
 
         <ListGroup title="Privacy & security">

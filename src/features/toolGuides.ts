@@ -55,8 +55,8 @@ export const TOOL_GUIDES: Record<string, ToolGuide> = {
     demo: 'scan',
     steps: [
       { icon: 'scan', title: 'Choose a mode', text: 'Document, Whiteboard, Book, ID card or Business card — the frame adapts.' },
-      { icon: 'camera', title: 'Capture pages', text: 'Keep the page inside the frame. Edges are found and straightened for you.' },
-      { icon: 'checkmark-circle-outline', title: 'Review and save', text: 'Tap Done to reorder, crop, apply filters and save your PDF.' },
+      { icon: 'camera', title: 'Auto or manual', text: 'With Auto capture, hold the phone still over the outlined page — it snaps by itself. Or tap the shutter.' },
+      { icon: 'checkmark-circle-outline', title: 'Review and save', text: 'Tap Done to reorder, crop and filter (one page or all). Text is made searchable when you save.' },
     ],
   },
   scan: {

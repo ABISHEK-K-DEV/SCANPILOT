@@ -8,6 +8,8 @@ import { useCameraPermissions } from '@/native/camera';
 import { waitForCameraPages } from '@/services/scan/cameraBridge';
 import { processCapturedPage } from '@/services/scan/pageProcessing';
 import { useScanSession } from '@/stores/scanSessionStore';
+import { useSettingsStore } from '@/stores/settingsStore';
+import { DEFAULT_SETTINGS } from '@/types/settings';
 
 const mockParams: { mode?: string; replace?: string } = {};
 
@@ -34,6 +36,7 @@ jest.mock('@/native/camera', () => {
 
 jest.mock('@/services/scan/pageProcessing', () => ({
   deleteSessionFiles: jest.fn(),
+  detectQuadInImage: jest.fn(async () => [{ x: 300, y: 300 }, { x: 2700, y: 320 }, { x: 2680, y: 3700 }, { x: 320, y: 3680 }]),
   deleteFileQuietly: jest.fn(),
   ingestImage: jest.fn(async (uri: string) => ({ id: 'p1', uri, width: 3000, height: 4000, originalUri: uri, originalWidth: 3000, originalHeight: 4000 })),
   autoCropPage: jest.fn(async (page: object) => ({ ...page, uri: 'cropped.jpg', width: 2000, height: 2800 })),
@@ -41,6 +44,7 @@ jest.mock('@/services/scan/pageProcessing', () => ({
   filterImage: jest.fn(async () => ({ uri: 'enhanced.jpg', width: 2000, height: 2800 })),
 }));
 jest.mock('@/services/scan/scanService', () => ({ pickPages: jest.fn(async () => null) }));
+jest.mock('@/db/settingsRepository', () => ({ saveSetting: jest.fn(async () => undefined), loadSettings: jest.fn() }));
 
 const metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 47, left: 0, right: 0, bottom: 34 } };
 const wrapper = ({ children }: { children: ReactNode }) => <SafeAreaProvider initialMetrics={metrics}>{children}</SafeAreaProvider>;
@@ -50,6 +54,7 @@ beforeEach(() => {
   delete mockParams.mode;
   delete mockParams.replace;
   useScanSession.getState().start();
+  useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, onboardingComplete: true, autoCapture: false } });
 });
 
 describe('ScanPilot camera', () => {
@@ -70,6 +75,18 @@ describe('ScanPilot camera', () => {
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/scan/review'));
     const [added] = useScanSession.getState().pages;
     expect(added).toMatchObject({ uri: 'enhanced.jpg', filter: 'auto', base: { uri: 'cropped.jpg' } });
+  });
+
+  it('auto-captures once the page is found and held steady', async () => {
+    useSettingsStore.setState({ settings: { ...DEFAULT_SETTINGS, onboardingComplete: true, autoCapture: true } });
+    await render(<CameraScreen />, { wrapper });
+    expect(screen.getByLabelText('Auto capture')).toBeTruthy();
+    // Two steady detections in a row → the snapshot becomes a page, no shutter press.
+    await waitFor(() => expect(screen.getByLabelText('Done, 1 page')).toBeTruthy(), { timeout: 4000 });
+    expect(processCapturedPage).toHaveBeenCalled();
+    // Switching to manual stops it.
+    await fireEvent.press(screen.getByLabelText('Manual capture'));
+    expect(useSettingsStore.getState().settings.autoCapture).toBe(false);
   });
 
   it('hands pages back to a waiting tool in return mode', async () => {

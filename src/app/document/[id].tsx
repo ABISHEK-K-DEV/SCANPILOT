@@ -62,14 +62,14 @@ function DocumentBar({ doc, onMore }: { doc: ScanDocument; onMore: () => void })
     }
   };
 
-  const quickTools = (['sign', 'edit', 'compress'] as ToolId[]).filter((t) => tool(t).available);
+  const quickTools = (['ocr', 'sign', 'edit'] as ToolId[]).filter((t) => tool(t).available);
 
   return (
     <>
       <View style={[styles.bar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingHorizontal: spacing.sm, paddingBottom: insets.bottom + 8 }]}>
         <BarButton icon="add-circle-outline" label="Add pages" onPress={() => setAddSheet(true)} />
         {quickTools.map((t) => (
-          <BarButton key={t} icon={tool(t).icon} label={t === 'sign' ? 'Sign' : t === 'edit' ? 'Edit' : 'Compress'} onPress={() => tools.launch(t, doc.id)} />
+          <BarButton key={t} icon={tool(t).icon} label={t === 'sign' ? 'Sign' : t === 'edit' ? 'Edit' : t === 'ocr' ? 'Text' : 'Compress'} onPress={() => tools.launch(t, doc.id)} />
         ))}
         <BarButton icon="grid-outline" label="More" onPress={onMore} />
       </View>

@@ -35,7 +35,7 @@ export function AppText({ variant = 'body', tone = 'default', color, align, styl
   return (
     <Text
       accessibilityRole={role}
-      maxFontSizeMultiplier={1.6}
+      maxFontSizeMultiplier={1.3}
       style={[typography[variant], { color: color ?? toneColor[tone], textAlign: align }, style, weightFix]}
       {...rest}
     />

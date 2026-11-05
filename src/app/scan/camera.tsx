@@ -2,18 +2,22 @@ import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, AppState, Easing, LayoutAnimation, Linking, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, AppState, Easing, LayoutAnimation, Linking, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Polygon } from 'react-native-svg';
 
 import { AppText, Button, Icon, type IconName } from '@/components/ui';
 import { CameraView, type FlashMode, useCameraPermissions } from '@/native/camera';
 import { hasCameraRequest, resolveCameraRequest } from '@/services/scan/cameraBridge';
 import { type ScanMode, SCAN_MODES, captureHint, scanMode } from '@/services/scan/modes';
-import { autoCropPage, filterImage, ingestImage, processCapturedPage, splitSpread } from '@/services/scan/pageProcessing';
+import { nextSteady, photoToPreview, STEADY_FRAMES } from '@/services/scan/autoCapture';
+import type { Quad } from '@/services/scan/geometry';
+import { autoCropPage, deleteFileQuietly, detectQuadInImage, filterImage, ingestImage, processCapturedPage, splitSpread } from '@/services/scan/pageProcessing';
 import { pickPages } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
 import { useGuideStore } from '@/stores/guideStore';
 import { useScanSession } from '@/stores/scanSessionStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { errorMessage } from '@/utils/errors';
 import { appAlert } from '@/stores/dialogStore';
 
@@ -62,16 +66,16 @@ async function processPhoto(uri: string, mode: ScanMode, width?: number, height?
   return out;
 }
 
-function RoundButton({ icon, label, onPress, active }: { icon: IconName; label: string; onPress: () => void; active?: boolean }) {
+function RoundButton({ icon, label, onPress, active, size = 42 }: { icon: IconName; label: string; onPress: () => void; active?: boolean; size?: number }) {
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={6}
-      style={({ pressed }) => [styles.round, { backgroundColor: active ? '#FFFFFF' : pressed ? 'rgba(255,255,255,0.24)' : 'rgba(255,255,255,0.12)' }]}
+      style={({ pressed }) => [styles.round, { width: size, height: size, borderRadius: size / 2, backgroundColor: active ? '#FFFFFF' : pressed ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.42)' }]}
     >
-      <Icon name={icon} size={20} color={active ? INK : '#FFFFFF'} />
+      <Icon name={icon} size={size < 42 ? 18 : 20} color={active ? INK : '#FFFFFF'} />
     </Pressable>
   );
 }
@@ -95,6 +99,23 @@ export default function CameraScreen() {
     if (m && barWidth) modeBar.current?.scrollTo({ x: Math.max(0, m.x + m.width / 2 - barWidth / 2), animated: true });
   }, [captureMode, barWidth]);
   const insets = useSafeAreaInsets();
+  const { width: winW } = useWindowDimensions();
+  const narrow = winW < 380;
+  const tiny = winW < 350;
+  const btn = narrow ? 38 : 42;
+  const shutter = narrow ? 70 : 80;
+  const autoCapture = useSettingsStore((st) => st.settings.autoCapture);
+  const updateSetting = useSettingsStore((st) => st.update);
+  // One capture at a time: auto snapshots and the shutter share the camera.
+  const cameraLock = useRef<Promise<unknown>>(Promise.resolve());
+  const withCamera = <T,>(task: () => Promise<T>): Promise<T> => {
+    const run = cameraLock.current.then(task, task);
+    cameraLock.current = run.catch(() => undefined);
+    return run;
+  };
+  const [liveState, setLive] = useState<{ quad: Quad; width: number; height: number } | null>(null);
+  const [steadyState, setSteady] = useState(0);
+  const busyRef = useRef(false);
   const [permission, requestPermission, getPermission] = useCameraPermissions();
   // Coming back from system Settings: re-read the permission so the camera opens straight away.
   useEffect(() => {
@@ -204,22 +225,23 @@ export default function CameraScreen() {
     return queue.current;
   };
 
+  const flyAway = (uri: string) => {
+    setFlyUri(uri);
+    fly.setValue(0);
+    Animated.timing(fly, { toValue: 1, duration: 520, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(() => setFlyUri(null));
+  };
+
   const shoot = async () => {
     if (shooting || finishing) return;
     setShooting(true);
     flashOverlay.setValue(1);
     Animated.timing(flashOverlay, { toValue: 0, duration: 260, useNativeDriver: true }).start();
-    const flyAway = (uri: string) => {
-      setFlyUri(uri);
-      fly.setValue(0);
-      Animated.timing(fly, { toValue: 1, duration: 520, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(() => setFlyUri(null));
-    };
     try {
       if (DEMO) {
         flyAway('/demo-assets/scan/page-2.jpg');
         await enqueue(() => processPhoto('/demo-assets/scan/page-2.jpg', captureMode));
       } else {
-        const photo = await camera.current?.takePictureAsync({ quality: 0.92, exif: false });
+        const photo = await withCamera(() => camera.current?.takePictureAsync({ quality: 0.92, exif: false }) ?? Promise.resolve(undefined));
         if (!photo) return;
         flyAway(photo.uri);
         const task = enqueue(() => processPhoto(photo.uri, captureMode, photo.width, photo.height));
@@ -233,6 +255,83 @@ export default function CameraScreen() {
       setShooting(false);
     }
   };
+
+  useEffect(() => {
+    busyRef.current = shooting || finishing;
+  }, [shooting, finishing]);
+  const autoActive = autoCapture && !DEMO && ready && !!permission?.granted && !finished;
+  // Outline and steadiness only mean something while auto-capture runs.
+  const live = autoActive ? liveState : null;
+  const steady = autoActive ? steadyState : 0;
+
+  /**
+   * Auto-capture: about once a second take a silent snapshot, find the page,
+   * draw its outline, and keep the snapshot as the page once the outline has
+   * held still for STEADY_FRAMES snapshots. Then pause briefly for the next page.
+   */
+  useEffect(() => {
+    if (!autoActive) return;
+    let cancelled = false;
+    // Waits end immediately when the screen closes, so no timers outlive it.
+    const pending = new Set<{ timer: ReturnType<typeof setTimeout>; resolve: () => void }>();
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const entry = { timer: setTimeout(() => (pending.delete(entry), resolve()), ms), resolve };
+        pending.add(entry);
+      });
+    void (async () => {
+      let last: Quad | null = null;
+      let count = 0;
+      while (!cancelled) {
+        if (busyRef.current) {
+          await sleep(400);
+          continue;
+        }
+        let snapUri: string | null = null;
+        try {
+          const snap = await withCamera(() => camera.current?.takePictureAsync({ quality: 0.88, exif: false, shutterSound: false }) ?? Promise.resolve(undefined));
+          if (!snap || cancelled) {
+            if (snap) deleteFileQuietly(snap.uri);
+            break;
+          }
+          snapUri = snap.uri;
+          const quad = await detectQuadInImage(snap.uri, snap.width, snap.height);
+          if (cancelled) break;
+          count = nextSteady(last, quad, count, Math.max(snap.width, snap.height));
+          last = quad;
+          setLive(quad ? { quad, width: snap.width, height: snap.height } : null);
+          setSteady(Math.min(1, count / STEADY_FRAMES));
+          if (quad && count >= STEADY_FRAMES && !busyRef.current) {
+            count = 0;
+            last = null;
+            const uri = snap.uri;
+            snapUri = null; // kept: it becomes the page
+            flashOverlay.setValue(1);
+            Animated.timing(flashOverlay, { toValue: 0, duration: 260, useNativeDriver: true }).start();
+            flyAway(uri);
+            void enqueue(() => processPhoto(uri, captureMode, snap.width, snap.height));
+            setLive(null);
+            setSteady(0);
+            await sleep(1600); // time to move to the next page
+          }
+        } catch {
+          await sleep(700);
+        } finally {
+          if (snapUri) deleteFileQuietly(snapUri);
+        }
+        await sleep(220);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      pending.forEach((entry) => {
+        clearTimeout(entry.timer);
+        entry.resolve();
+      });
+      pending.clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoActive, captureMode]);
 
   useEffect(() => {
     if (pages.length === 0) return;
@@ -258,19 +357,38 @@ export default function CameraScreen() {
 
   const close = () => router.back();
 
+  // Frame guide sized to fit between the top bar and the hint on any screen.
+  const availW = stageSize.width * (def.aspect >= 1 ? 0.9 : 0.82);
+  const availH = Math.max(120, stageSize.height - (insets.top + 60) - 70);
+  const guideW = stageSize.width > 0 ? Math.min(availW, availH * def.aspect) : 0;
+  const guideSize = guideW > 0 ? { width: guideW, height: guideW / def.aspect } : { width: '80%' as const, aspectRatio: def.aspect };
+  const outline = live && stageSize.width > 0 ? photoToPreview(live.quad, live, stageSize) : null;
+  const hint = !ready
+    ? 'Starting camera…'
+    : autoActive
+      ? live
+        ? steady >= 0.5
+          ? 'Hold still…'
+          : 'Page found — hold steady'
+        : captureMode === 'id-card' ? captureHint(captureMode, pages.length) : 'Looking for the page…'
+      : captureHint(captureMode, pages.length);
+
   const top = (
     <View style={[styles.topBar, { paddingTop: insets.top + 8 }]}>
-      <RoundButton icon="close" label="Close camera" onPress={close} />
-      <View style={styles.titlePill}>
+      <RoundButton icon="close" label="Close camera" onPress={close} size={btn} />
+      <View style={[styles.titlePill, { paddingHorizontal: narrow ? 10 : 12 }]}>
         <Icon name={MODE_ICON[captureMode]} size={15} color="#FFFFFF" />
-        <AppText variant="caption" color="#FFFFFF" style={styles.bold}>
-          {single ? 'Retake page' : def.label}
-        </AppText>
+        {!tiny ? (
+          <AppText variant="caption" color="#FFFFFF" numberOfLines={1} maxFontSizeMultiplier={1.15} style={styles.bold}>
+            {single ? 'Retake' : def.label}
+          </AppText>
+        ) : null}
       </View>
-      <View style={styles.topRight}>
-        <RoundButton icon="help-circle-outline" label="How scanning works" onPress={() => openGuide(guideId)} />
-        <RoundButton icon="grid-3x3" label={grid ? 'Hide grid' : 'Show grid'} active={grid} onPress={() => setGrid((g) => !g)} />
+      <View style={[styles.topRight, { gap: narrow ? 6 : 10 }]}>
+        <RoundButton icon="help-circle-outline" label="How scanning works" onPress={() => openGuide(guideId)} size={btn} />
+        <RoundButton icon="grid-3x3" label={grid ? 'Hide grid' : 'Show grid'} active={grid} onPress={() => setGrid((g) => !g)} size={btn} />
         <RoundButton
+          size={btn}
           icon={flash === 'off' ? 'flash-off' : 'flash'}
           label={FLASH_LABEL[flash]}
           active={flash !== 'off'}
@@ -340,12 +458,13 @@ export default function CameraScreen() {
         ) : null}
 
         {/* Page frame guide */}
-        <View style={[StyleSheet.absoluteFill, styles.guideWrap]} pointerEvents="none">
+        <View style={[StyleSheet.absoluteFill, styles.guideWrap, { paddingTop: insets.top + 60, paddingBottom: 16 }]} pointerEvents="none">
           <Animated.View
             onLayout={(e) => setGuideHeight(e.nativeEvent.layout.height)}
             style={[
               styles.guide,
-              def.aspect >= 1 ? { width: '88%', aspectRatio: def.aspect } : { width: '80%', aspectRatio: def.aspect },
+              guideSize,
+              { opacity: live ? 0.35 : 1 },
               { transform: [{ scale: breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.015] }) }] },
             ]}
           >
@@ -368,11 +487,22 @@ export default function CameraScreen() {
           </Animated.View>
           <View style={styles.hint}>
             <AppText variant="caption" color="#FFFFFF" style={styles.bold}>
-              {ready ? captureHint(captureMode, pages.length) : 'Starting camera…'}
+              {hint}
             </AppText>
           </View>
         </View>
 
+        {outline ? (
+          <Svg style={StyleSheet.absoluteFill} pointerEvents="none" width={stageSize.width} height={stageSize.height}>
+            <Polygon
+              points={outline.map((p) => `${p.x},${p.y}`).join(' ')}
+              fill="rgba(94,234,212,0.16)"
+              stroke="#5EEAD4"
+              strokeWidth={steady >= 0.5 ? 4 : 2.5}
+              strokeLinejoin="round"
+            />
+          </Svg>
+        ) : null}
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, { opacity: flashOverlay }]} />
         {flyUri && stageSize.width > 0 ? (
           <Animated.View
@@ -401,7 +531,7 @@ export default function CameraScreen() {
       </View>
 
       {/* Bottom controls */}
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + 18 }]}>
+      <View style={[styles.bottom, { paddingBottom: insets.bottom + (narrow ? 10 : 16), paddingTop: narrow ? 12 : 16 }]}>
         {!single ? (
           <ScrollView
             ref={modeBar}
@@ -437,7 +567,7 @@ export default function CameraScreen() {
             })}
           </ScrollView>
         ) : null}
-        <View style={styles.controls}>
+        <View style={[styles.controls, { paddingHorizontal: narrow ? 18 : 28 }]}>
           <Pressable onPress={() => void fromGallery()} accessibilityRole="button" accessibilityLabel="Add from photos" style={styles.side}>
             <View style={styles.sideIcon}>
               <Icon name="image-plus" size={22} color="#FFFFFF" />
@@ -452,9 +582,21 @@ export default function CameraScreen() {
             disabled={!ready || shooting || finishing}
             accessibilityRole="button"
             accessibilityLabel="Take photo"
-            style={({ pressed }) => [styles.shutterRing, { opacity: ready ? 1 : 0.5, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+            style={({ pressed }) => [
+              styles.shutterRing,
+              {
+                width: shutter,
+                height: shutter,
+                borderRadius: shutter / 2,
+                borderColor: autoActive && steady > 0 ? '#5EEAD4' : '#FFFFFF',
+                opacity: ready ? 1 : 0.5,
+                transform: [{ scale: pressed ? 0.94 : 1 }],
+              },
+            ]}
           >
-            <View style={styles.shutter}>{shooting ? <ActivityIndicator color={INK} /> : null}</View>
+            <View style={[styles.shutter, { width: shutter - 18, height: shutter - 18, borderRadius: (shutter - 18) / 2 }]}>
+              {shooting ? <ActivityIndicator color={INK} /> : autoActive ? <AppText variant="label" color={INK}>AUTO</AppText> : null}
+            </View>
           </Pressable>
 
           <Pressable
@@ -487,6 +629,27 @@ export default function CameraScreen() {
             </AppText>
           </Pressable>
         </View>
+        {!single ? (
+          <View style={[styles.autoRow, { marginTop: narrow ? 10 : 14 }]} accessibilityRole="radiogroup">
+            {([false, true] as const).map((value) => {
+              const on = autoCapture === value;
+              return (
+                <Pressable
+                  key={String(value)}
+                  onPress={() => void updateSetting('autoCapture', value)}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: on }}
+                  accessibilityLabel={value ? 'Auto capture' : 'Manual capture'}
+                  style={[styles.autoChip, on && styles.autoChipOn]}
+                >
+                  <AppText variant="caption" maxFontSizeMultiplier={1.15} color={on ? INK : '#E5E7EB'} style={styles.modeText}>
+                    {value ? 'Auto capture' : 'Manual'}
+                  </AppText>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -513,16 +676,19 @@ const styles = StyleSheet.create({
   sweep: { position: 'absolute', left: 10, right: 10, top: 0, height: 2.5, borderRadius: 2, backgroundColor: '#5EEAD4', shadowColor: '#5EEAD4', shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   flyer: { position: 'absolute', borderRadius: 10, overflow: 'hidden', borderWidth: 3, borderColor: '#FFFFFF' },
   spine: { position: 'absolute', top: '6%', bottom: '6%', left: '50%', width: 2, marginLeft: -1, backgroundColor: 'rgba(94,234,212,0.7)' },
-  modesWrap: { flexGrow: 0, marginBottom: 16 },
+  modesWrap: { flexGrow: 0, marginBottom: 12 },
+  autoRow: { flexDirection: 'row', alignSelf: 'center', padding: 3, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.1)' },
+  autoChip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999 },
+  autoChipOn: { backgroundColor: '#FFFFFF' },
   modes: { paddingHorizontal: 16, gap: 6, alignItems: 'center', flexGrow: 1, justifyContent: 'center' },
   modeChip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999 },
   modeChipActive: { backgroundColor: '#FFFFFF' },
   modeText: { fontWeight: '600', fontSize: 13 },
   hint: { marginTop: 18, backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 999 },
   flash: { backgroundColor: '#FFFFFF' },
-  bottom: { backgroundColor: INK, paddingTop: 18 },
+  bottom: { backgroundColor: INK },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 28 },
-  side: { width: 72, alignItems: 'center', gap: 6 },
+  side: { minWidth: 64, alignItems: 'center', gap: 6 },
   sideIcon: { width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
   shutterRing: { width: 80, height: 80, borderRadius: 40, borderWidth: 4, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
   shutter: { width: 62, height: 62, borderRadius: 31, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },

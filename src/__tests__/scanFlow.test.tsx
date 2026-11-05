@@ -130,7 +130,7 @@ describe('scan review screen', () => {
 
   it('saves with the chosen preset and opens the new document', async () => {
     await render(<ScanReviewScreen />, { wrapper });
-    await fireEvent.press(screen.getByLabelText('Page size'));
+    await fireEvent.press(screen.getByLabelText('Options'));
     await fireEvent.press(screen.getByLabelText('Receipt, 80 mm wide'));
     await fireEvent.press(screen.getByLabelText('Save PDF · 3 pages'));
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/document/[id]', params: { id: 'doc-1' } }));

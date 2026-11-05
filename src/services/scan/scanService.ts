@@ -5,7 +5,8 @@ import { launchImageLibraryAsync } from 'expo-image-picker';
 
 import { getScanner } from '@/native/scanner';
 import { createDocumentFromBytes } from '@/services/library/documentService';
-import { idCardSheetPdf, imagesToPdf } from '@/services/pdf/pdfService';
+import { saveDocumentText } from '@/db/textRepository';
+import { addTextLayer, idCardSheetPdf, imagesToPdf } from '@/services/pdf/pdfService';
 import type { CancelToken, ImageInput, Progress } from '@/services/pdf/types';
 import { readBytes } from '@/services/storage/fileStore';
 import type { ScanDocument } from '@/types/document';
@@ -65,6 +66,8 @@ export async function savePagesAsPdf(
     folderId: string | null;
     /** `id-card-sheet`: front and back on one A4 page at true card size. */
     layout?: 'pages' | 'id-card-sheet';
+    /** Recognised text per page (same order): added as an invisible, searchable text layer. */
+    textPages?: readonly { text: string; lines: readonly { text: string; box: { x: number; y: number; width: number; height: number } }[] }[];
     onProgress?: Progress;
     cancelToken?: CancelToken;
   },
@@ -85,12 +88,25 @@ export async function savePagesAsPdf(
         title: options.name,
         cancelToken: options.cancelToken,
       });
-  const doc = await createDocumentFromBytes(bytes, {
+  let finalBytes = bytes;
+  const layers = !sheet && options.textPages ? options.textPages.map((p, page) => ({ page, lines: [...p.lines] })).filter((l) => l.lines.length > 0) : [];
+  if (layers.length > 0) {
+    try {
+      finalBytes = await addTextLayer(bytes, layers);
+    } catch {
+      // Keep the plain PDF if the text layer cannot be added.
+    }
+  }
+  const doc = await createDocumentFromBytes(finalBytes, {
     name: options.name,
     source: 'scan',
     folderId: options.folderId,
     pageCount: sheet ? 1 : pages.length,
   });
+  if (!sheet && options.textPages?.some((p) => p.text.trim())) {
+    // Library search matches the recognised text.
+    await saveDocumentText(doc.id, options.textPages.map((p) => p.text)).catch(() => undefined);
+  }
   options.onProgress?.(total, total);
   return doc;
 }

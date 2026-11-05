@@ -10,13 +10,17 @@ import { useAppTheme } from '@/theme';
 
 interface FilterStripProps {
   page: ScanPage;
+  /** Called with the chosen filter; the parent applies it to one page or all, per `scope`. */
   onSelect: (filter: FilterId) => void;
-  onApplyToAll: () => void;
+  scope: 'page' | 'all';
+  onScopeChange: (scope: 'page' | 'all') => void;
+  pageCount: number;
   busy?: boolean;
+  compact?: boolean;
 }
 
 /** Horizontal strip of live filter previews for the current page. */
-export function FilterStrip({ page, onSelect, onApplyToAll, busy }: FilterStripProps) {
+export function FilterStrip({ page, onSelect, scope, onScopeChange, pageCount, busy, compact }: FilterStripProps) {
   const { colors, radius, spacing } = useAppTheme();
   const source = page.base?.uri ?? page.uri;
   const [previews, setPreviews] = useState<{ source: string; map: Partial<Record<FilterId, string>> } | null>(null);
@@ -37,7 +41,34 @@ export function FilterStrip({ page, onSelect, onApplyToAll, busy }: FilterStripP
 
   const map = previews?.source === source ? previews.map : null;
 
+  const thumbW = compact ? 52 : 66;
+  const thumbH = compact ? 64 : 82;
   return (
+    <View>
+      {pageCount > 1 ? (
+        <View style={[styles.scopeRow, { paddingHorizontal: spacing.lg, gap: spacing.sm }]}>
+          <AppText variant="caption" tone="muted" style={styles.scopeLabel}>
+            Apply to
+          </AppText>
+          {(['page', 'all'] as const).map((value) => {
+            const on = scope === value;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => onScopeChange(value)}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: on }}
+                accessibilityLabel={value === 'page' ? 'Apply filter to this page' : `Apply filter to all ${pageCount} pages`}
+                style={[styles.scopeChip, { borderRadius: radius.pill, backgroundColor: on ? colors.primary : colors.surface, borderColor: on ? colors.primary : colors.borderStrong }]}
+              >
+                <AppText variant="caption" maxFontSizeMultiplier={1.2} color={on ? colors.onPrimary : colors.textMuted} style={styles.scopeText}>
+                  {value === 'page' ? 'This page' : `All ${pageCount} pages`}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -53,14 +84,14 @@ export function FilterStrip({ page, onSelect, onApplyToAll, busy }: FilterStripP
             onPress={() => onSelect(f.id)}
             disabled={busy}
             accessibilityRole="radio"
-            accessibilityLabel={`${f.label} filter`}
+            accessibilityLabel={`${f.label} filter${scope === 'all' && pageCount > 1 ? ', all pages' : ''}`}
             accessibilityState={{ selected, disabled: !!busy }}
             style={({ pressed }) => [styles.item, { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.94 : selected ? 1.05 : 1 }] }]}
           >
             <View
               style={[
                 styles.thumb,
-                { borderRadius: radius.md, borderColor: selected ? colors.primary : colors.border, backgroundColor: colors.surfaceAlt },
+                { width: thumbW, height: thumbH, borderRadius: radius.md, borderColor: selected ? colors.primary : colors.border, backgroundColor: colors.surfaceAlt },
               ]}
             >
               {uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} /> : <ActivityIndicator color={colors.textSubtle} size="small" />}
@@ -76,29 +107,19 @@ export function FilterStrip({ page, onSelect, onApplyToAll, busy }: FilterStripP
           </Pressable>
         );
       })}
-      <Pressable
-        onPress={onApplyToAll}
-        disabled={busy}
-        accessibilityRole="button"
-        accessibilityLabel="Apply this filter to all pages"
-        style={({ pressed }) => [styles.item, { opacity: pressed ? 0.7 : 1 }]}
-      >
-        <View style={[styles.thumb, styles.all, { borderRadius: radius.md, borderColor: colors.borderStrong }]}>
-          <Icon name="copy-outline" size={20} color={colors.primary} />
-        </View>
-        <AppText variant="caption" color={colors.textMuted} style={styles.label}>
-          Apply to all
-        </AppText>
-      </Pressable>
     </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   noGrow: { flexGrow: 0, flexShrink: 0 },
   item: { width: 80, alignItems: 'center', gap: 5 },
-  thumb: { width: 66, height: 82, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  all: { borderStyle: 'dashed', borderWidth: 1.5 },
+  thumb: { borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   check: { position: 'absolute', top: 4, right: 4, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   label: { fontSize: 11, fontWeight: '500' },
+  scopeRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 6 },
+  scopeLabel: { fontWeight: '600' },
+  scopeChip: { paddingHorizontal: 12, paddingVertical: 5, borderWidth: 1 },
+  scopeText: { fontWeight: '600' },
 });

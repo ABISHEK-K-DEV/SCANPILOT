@@ -30,3 +30,6 @@ export async function splitSpread(page: ScanPage): Promise<[ScanPage, ScanPage]>
 export async function processCapturedPage(page: ScanPage): Promise<ScanPage> {
   return page;
 }
+export async function detectQuadInImage(): Promise<null> {
+  return null;
+}

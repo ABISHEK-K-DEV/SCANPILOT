@@ -186,6 +186,11 @@ async function detectPageQuad(page: ScanPage): Promise<Quad | null> {
   }
 }
 
+/** Page outline in a photo (pixel coordinates), for the camera's live outline and auto-capture. */
+export async function detectQuadInImage(uri: string, width: number, height: number): Promise<Quad | null> {
+  return detectPageQuad({ id: 'probe', uri, width, height, originalUri: uri, originalWidth: width, originalHeight: height });
+}
+
 export async function autoCropPage(page: ScanPage): Promise<ScanPage> {
   try {
     const quad = await detectPageQuad(page);

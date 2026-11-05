@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, Stack, usePreventRemove } from 'expo-router';
 import { useRef, useState } from 'react';
-import { LayoutAnimation, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { LayoutAnimation, Pressable, ScrollView, StyleSheet, Switch, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BusinessCardPanel } from '@/components/scan/BusinessCardPanel';
@@ -25,7 +25,9 @@ import type { FilterId } from '@/services/scan/filters';
 import { filterImage, rotateImage } from '@/services/scan/pageProcessing';
 import { savePagesAsPdf } from '@/services/scan/scanService';
 import { PRESETS } from '@/services/scan/types';
+import { isOcrSupported, recogniseImages } from '@/services/ocr/ocrService';
 import { useScanSession } from '@/stores/scanSessionStore';
+import { useSettingsStore } from '@/stores/settingsStore';
 import { useAppTheme } from '@/theme';
 import { errorMessage, isCancelled } from '@/utils/errors';
 import { appAlert } from '@/stores/dialogStore';
@@ -36,17 +38,29 @@ type Panel = 'edit' | 'filters' | 'size' | 'contact';
 const PANELS: { id: Panel; label: string; icon: 'crop-outline' | 'color-wand-outline' | 'document-text-outline' | 'contact' }[] = [
   { id: 'edit', label: 'Edit', icon: 'crop-outline' },
   { id: 'filters', label: 'Filter', icon: 'color-wand-outline' },
-  { id: 'size', label: 'Page size', icon: 'document-text-outline' },
+  { id: 'size', label: 'Options', icon: 'document-text-outline' },
 ];
 
 export default function ScanReviewScreen() {
   const { colors, radius, spacing } = useAppTheme();
+  // Small phones (or large system font): tighter spacing so the Save bar always fits.
+  const { width: winW, height: winH } = useWindowDimensions();
+  const compact = winH < 760;
+  const narrow = winW < 380;
+  const tight = winH < 620;
+  const thumbW = tight ? 42 : compact ? 50 : 64;
   const { pages, selectedId, preset, name, folderId, mode, select, remove, move, update, setPreset, setName, clear } = useScanSession();
   const idSheet = mode === 'id-card' && pages.length <= 2;
   const panels = mode === 'business-card' ? [...PANELS, { id: 'contact' as const, label: 'Contact', icon: 'contact' as const }] : PANELS;
   const flow = useScanFlow();
   const [sheet, setSheet] = useState<Sheet>(null);
   const [panel, setPanel] = useState<Panel>('edit');
+  const ocrSupported = isOcrSupported();
+  const ocrOn = useSettingsStore((st) => st.settings.scanOcr) && ocrSupported;
+  const updateSetting = useSettingsStore((st) => st.update);
+  const [savingTitle, setSavingTitle] = useState('Creating PDF');
+  // Multi-page scans usually want one look for every page.
+  const [filterScope, setFilterScope] = useState<'page' | 'all'>('all');
   const [busy, setBusy] = useState<string | null>(null);
   const [saving, setSaving] = useState<{ completed: number; total: number } | null>(null);
   const cancelToken = useRef({ cancelled: false });
@@ -101,7 +115,11 @@ export default function ScanReviewScreen() {
 
   const applyToAll = (filter: FilterId) =>
     withBusy('Applying to all pages', async () => {
-      for (const p of useScanSession.getState().pages) {
+      const all = useScanSession.getState().pages;
+      for (let i = 0; i < all.length; i += 1) {
+        const p = all[i];
+        if ((p.filter ?? 'original') === filter) continue; // already has this look
+        setBusy(`Applying filter · page ${i + 1} of ${all.length}`);
         const base = p.base ?? { uri: p.uri, width: p.width, height: p.height };
         if (filter === 'original') update(p.id, { uri: base.uri, width: base.width, height: base.height, base: undefined, filter: undefined });
         else update(p.id, { ...(await filterImage(base.uri, filter)), base, filter });
@@ -121,7 +139,27 @@ export default function ScanReviewScreen() {
     cancelToken.current = { cancelled: false };
     setSaving({ completed: 0, total: pages.length + 1 });
     try {
+      // Searchable text: recognise each page on the phone before building the PDF.
+      let textPages: Awaited<ReturnType<typeof recogniseImages>>['pages'] | undefined;
+      if (ocrOn && !idSheet) {
+        setSavingTitle('Reading text');
+        try {
+          textPages = (
+            await recogniseImages(
+              pages.map((p) => p.uri),
+              'en',
+              { cancelToken: cancelToken.current, onProgress: (completed, total) => setSaving({ completed, total }) },
+            )
+          ).pages;
+        } catch (error) {
+          if (isCancelled(error)) throw error;
+          textPages = undefined; // Save without text rather than fail.
+        }
+      }
+      setSavingTitle('Creating PDF');
+      setSaving({ completed: 0, total: pages.length + 1 });
       const doc = await savePagesAsPdf(pages, {
+        textPages,
         layout: idSheet ? 'id-card-sheet' : 'pages',
         name: await availableName(name || 'Scan'),
         preset,
@@ -175,10 +213,10 @@ export default function ScanReviewScreen() {
           styles.nameRow,
           {
             marginHorizontal: spacing.lg,
-            marginTop: spacing.sm,
-            marginBottom: spacing.md,
+            marginTop: compact ? spacing.xs : spacing.sm,
+            marginBottom: compact ? spacing.sm : spacing.md,
             paddingHorizontal: spacing.md,
-            minHeight: 48,
+            minHeight: compact ? 40 : 48,
             gap: spacing.sm,
             borderRadius: radius.md + 2,
             borderColor: colors.border,
@@ -220,12 +258,12 @@ export default function ScanReviewScreen() {
         </View>
       </View>
 
-      <View style={[styles.stripHeader, { paddingHorizontal: spacing.lg, marginTop: spacing.sm }]}>
+      <View style={[styles.stripHeader, { paddingHorizontal: spacing.lg, marginTop: compact ? 2 : spacing.sm }]}>
         <AppText variant="label" tone="subtle" style={styles.flex}>
           {pages.length} {pages.length === 1 ? 'PAGE' : 'PAGES'}
         </AppText>
-        <IconButton icon="chevron-back" label="Move page earlier" disabled={index === 0} onPress={() => page && move(page.id, -1)} />
-        <IconButton icon="chevron-forward" label="Move page later" disabled={index === pages.length - 1} onPress={() => page && move(page.id, 1)} />
+        <IconButton style={tight ? { width: 36, height: 30 } : undefined} icon="chevron-back" label="Move page earlier" disabled={index === 0} onPress={() => page && move(page.id, -1)} />
+        <IconButton style={tight ? { width: 36, height: 30 } : undefined} icon="chevron-forward" label="Move page later" disabled={index === pages.length - 1} onPress={() => page && move(page.id, 1)} />
       </View>
       <ScrollView
         horizontal
@@ -234,7 +272,7 @@ export default function ScanReviewScreen() {
         contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: 2 }}
       >
         {pages.map((p, i) => (
-          <PageThumb key={p.id} page={p} index={i} selected={p.id === page?.id} onPress={() => select(p.id)} />
+          <PageThumb key={p.id} page={p} index={i} width={thumbW} selected={p.id === page?.id} onPress={() => select(p.id)} />
         ))}
         <Pressable
           onPress={() => setSheet('add')}
@@ -242,6 +280,7 @@ export default function ScanReviewScreen() {
           accessibilityLabel="Add pages"
           style={({ pressed }) => [
             styles.addTile,
+            { width: thumbW, height: Math.round(thumbW * 1.34) },
             { borderColor: colors.primary, borderRadius: radius.sm + 2, backgroundColor: pressed ? colors.surfacePressed : colors.primarySoft },
           ]}
         >
@@ -252,7 +291,7 @@ export default function ScanReviewScreen() {
         </Pressable>
       </ScrollView>
 
-      <View style={[styles.segment, { marginHorizontal: spacing.lg, marginTop: spacing.md, backgroundColor: colors.surfaceAlt, borderRadius: radius.md }]} accessibilityRole="tablist">
+      <View style={[styles.segment, { marginHorizontal: spacing.lg, marginTop: compact ? spacing.sm : spacing.md, backgroundColor: colors.surfaceAlt, borderRadius: radius.md }]} accessibilityRole="tablist">
         {panels.map((tab) => {
           const active = panel === tab.id;
           return (
@@ -265,7 +304,7 @@ export default function ScanReviewScreen() {
               accessibilityRole="tab"
               accessibilityLabel={tab.label}
               accessibilityState={{ selected: active }}
-              style={[styles.segmentItem, { borderRadius: radius.md - 3, backgroundColor: active ? colors.surface : 'transparent' }, active && styles.segmentShadow]}
+              style={[styles.segmentItem, { minHeight: compact ? 34 : 38,  borderRadius: radius.md - 3, backgroundColor: active ? colors.surface : 'transparent' }, active && styles.segmentShadow]}
             >
               <Icon name={tab.icon} size={16} color={active ? colors.primary : colors.textMuted} />
               <AppText variant="caption" color={active ? colors.text : colors.textMuted} style={styles.segmentLabel}>
@@ -276,7 +315,7 @@ export default function ScanReviewScreen() {
         })}
       </View>
 
-      <View style={styles.panel}>
+      <View style={[styles.panel, { minHeight: compact ? 92 : 112 }]}>
         {panel === 'edit' ? (
           <View style={[styles.toolbar, { paddingHorizontal: spacing.sm }]}>
             <ToolbarButton icon="arrow-undo-outline" label="Left" onPress={() => void rotate(-90)} />
@@ -288,7 +327,15 @@ export default function ScanReviewScreen() {
         ) : panel === 'contact' && pages[0] ? (
           <BusinessCardPanel imageUri={pages[0].uri} />
         ) : panel === 'filters' && page ? (
-          <FilterStrip page={page} busy={busy !== null} onSelect={(f) => void setFilter(f)} onApplyToAll={() => void applyToAll(page.filter ?? 'original')} />
+          <FilterStrip
+            page={page}
+            compact={compact}
+            busy={busy !== null}
+            pageCount={pages.length}
+            scope={filterScope}
+            onScopeChange={setFilterScope}
+            onSelect={(f) => void (filterScope === 'all' && pages.length > 1 ? applyToAll(f) : setFilter(f))}
+          />
         ) : (
           <ScrollView
             horizontal
@@ -301,12 +348,27 @@ export default function ScanReviewScreen() {
             ))}
           </ScrollView>
         )}
+        {panel === 'size' && ocrSupported && !idSheet ? (
+          <View style={[styles.ocrRow, { marginHorizontal: spacing.lg, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.surface, borderColor: colors.border, gap: spacing.sm }]}>
+            <Icon name="scan-text" size={18} color={colors.primary} />
+            <View style={styles.flex}>
+              <AppText variant="bodyStrong" numberOfLines={1}>
+                Searchable text (OCR)
+              </AppText>
+              <AppText variant="caption" tone="muted" numberOfLines={1}>
+                Copy and search the words in your PDF
+              </AppText>
+            </View>
+            <Switch value={ocrOn} onValueChange={(v) => void updateSetting('scanOcr', v)} trackColor={{ true: colors.primary, false: colors.border }} accessibilityLabel="Searchable text (OCR)" />
+          </View>
+        ) : null}
       </View>
 
-      <View style={[styles.saveBar, { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md, gap: spacing.sm, borderTopColor: colors.border, backgroundColor: colors.surface }]}>
-        <Button label="Scan more" icon="camera" variant="secondary" onPress={() => void flow.capture('append')} accessibilityHint="Opens the camera to add pages" />
+      <View style={[styles.saveBar, { paddingHorizontal: spacing.lg, paddingTop: compact ? spacing.sm : spacing.md, paddingBottom: compact ? spacing.sm : spacing.md, gap: spacing.sm, borderTopColor: colors.border, backgroundColor: colors.surface }]}>
+        <Button label={narrow ? 'Scan' : 'Scan more'} icon="camera" variant="secondary" onPress={() => void flow.capture('append')} accessibilityHint="Opens the camera to add pages" />
         <Button
-          label={`Save PDF · ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`}
+          label={narrow ? `Save PDF (${pages.length})` : `Save PDF · ${pages.length} ${pages.length === 1 ? 'page' : 'pages'}`}
+          accessibilityHint={`Saves ${pages.length} ${pages.length === 1 ? 'page' : 'pages'} as a PDF`}
           icon="checkmark"
           onPress={() => void save()}
           style={styles.flex}
@@ -335,7 +397,8 @@ export default function ScanReviewScreen() {
       <ProgressOverlay visible={busy !== null} title={busy ?? ''} progress={null} />
       <ProgressOverlay
         visible={saving !== null}
-        title="Creating PDF"
+        title={savingTitle}
+        detail={savingTitle === 'Reading text' && saving ? `Page ${Math.min(saving.completed + 1, saving.total)} of ${saving.total} · on this phone` : undefined}
         progress={saving ? saving.completed / saving.total : null}
         onCancel={() => {
           cancelToken.current.cancelled = true;
@@ -350,7 +413,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   center: { alignSelf: 'center' },
   nameRow: { flexDirection: 'row', alignItems: 'center', borderWidth: StyleSheet.hairlineWidth },
-  preview: { flex: 1, overflow: 'hidden', minHeight: 200 },
+  preview: { flex: 1, overflow: 'hidden', minHeight: 64 },
   counter: { position: 'absolute', bottom: 12, alignSelf: 'center', paddingHorizontal: 12, paddingVertical: 4 },
   counterText: { fontWeight: '600' },
   saveBar: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
@@ -360,12 +423,13 @@ const styles = StyleSheet.create({
   chips: { alignItems: 'center' },
   toolbar: { flexDirection: 'row' },
   stripHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  addTile: { width: 64, height: 86, borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  addTile: { borderWidth: 1.5, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addLabel: { fontSize: 10.5, lineHeight: 13 },
   segment: { flexDirection: 'row', padding: 3 },
+  ocrRow: { flexDirection: 'row', alignItems: 'center', minHeight: 56, borderWidth: StyleSheet.hairlineWidth, marginBottom: 8 },
   notice: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 9 },
-  segmentItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 38 },
+  segmentItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   segmentShadow: { shadowColor: '#0F172A', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   segmentLabel: { fontWeight: '600' },
-  panel: { minHeight: 112, justifyContent: 'center' },
+  panel: { justifyContent: 'center' },
 });

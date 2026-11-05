@@ -78,7 +78,7 @@ const shots = [
   ['21-scan-review', '/scan/review'],
   ['22-scan-review-photo', '/scan/review?page=p3'],
   ['23-scan-presets', '/scan/review', async (p) => {
-    await p.getByLabel('Page size', { exact: true }).click();
+    await p.getByLabel('Options', { exact: true }).click();
     await p.getByRole('button', { name: /^Receipt,/ }).click();
   }],
   ['24-scan-add-pages', '/scan/review', async (p) => p.getByLabel('Add pages').last().click()],
