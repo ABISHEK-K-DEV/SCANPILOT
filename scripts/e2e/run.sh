@@ -13,10 +13,10 @@ adb logcat -d > e2e-results/logcat.txt
 if [ "$status" -ne 0 ]; then
   # Make failures readable straight from the job log.
   echo "::group::Screen text at failure"
-  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 && adb shell cat /sdcard/ui.xml | grep -o 'text="[^"]*"\|content-desc="[^"]*"' | grep -v '=""' | head -60
+  maestro hierarchy 2>/dev/null | grep -oE '"(text|accessibilityText)" *: *"[^"]+"' | head -60
   echo "::endgroup::"
   echo "::group::App log (errors, JS, camera)"
-  grep -E "ReactNativeJS|AndroidRuntime|ExpoModulesCore|CameraX|scanpilot| E " e2e-results/logcat.txt | tail -150
+  grep -v " Maestro " e2e-results/logcat.txt | grep -E "ReactNativeJS|AndroidRuntime|ExpoModulesCore|ScanPilotCamera|CameraX|Camera2|app\.scanpilot" | tail -150
   echo "::endgroup::"
 fi
 if grep -E "FATAL EXCEPTION|ANR in app\.scanpilot" -A 30 e2e-results/logcat.txt | grep -q "app.scanpilot"; then

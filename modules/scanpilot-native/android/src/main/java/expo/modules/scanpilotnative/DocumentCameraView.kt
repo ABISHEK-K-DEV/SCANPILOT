@@ -7,6 +7,9 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.util.Base64
 import android.util.Size
 import android.view.View
@@ -32,6 +35,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 
 /**
@@ -125,25 +129,48 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
         if (released || !isAttachedToWindow) return@addListener
         val cameraProvider = future.get()
         provider = cameraProvider
-        val preview = Preview.Builder().setResolutionSelector(fourThree(null)).build().also {
-          it.surfaceProvider = previewView.surfaceProvider
+        // Full set first; devices (and emulators) that cannot run all three
+        // streams at these sizes get lighter configurations.
+        val attempts = listOf(
+          Triple(fourThree(Size(4032, 3024)), fourThree(Size(640, 480)), true),
+          Triple(fourThree(Size(1920, 1440)), fourThree(Size(320, 240)), true),
+          Triple(fourThree(Size(1920, 1440)), null, false),
+        )
+        var lastError: Exception? = null
+        for ((captureRes, analysisRes, withAnalysis) in attempts) {
+          try {
+            val preview = Preview.Builder().setResolutionSelector(fourThree(null)).build().also {
+              it.surfaceProvider = previewView.surfaceProvider
+            }
+            val capture = ImageCapture.Builder()
+              .setResolutionSelector(captureRes)
+              .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+              .setFlashMode(flashMode)
+              .build()
+            cameraProvider.unbindAll()
+            if (withAnalysis && analysisRes != null) {
+              val analysis = ImageAnalysis.Builder()
+                .setResolutionSelector(analysisRes)
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .build()
+              analysis.setAnalyzer(analysisExecutor) { image -> analyse(image) }
+              cameraProvider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis)
+            } else {
+              cameraProvider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture)
+            }
+            imageCapture = capture
+            lastError = null
+            break
+          } catch (e: Exception) {
+            Log.w(TAG, "Camera configuration failed, trying a lighter one", e)
+            lastError = e
+          }
         }
-        val capture = ImageCapture.Builder()
-          .setResolutionSelector(fourThree(Size(4032, 3024)))
-          .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-          .setFlashMode(flashMode)
-          .build()
-        val analysis = ImageAnalysis.Builder()
-          .setResolutionSelector(fourThree(Size(640, 480)))
-          .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-          .build()
-        analysis.setAnalyzer(analysisExecutor) { image -> analyse(image) }
-        imageCapture = capture
-        cameraProvider.unbindAll()
-        cameraProvider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis)
+        lastError?.let { throw it }
         bound = true
         onCameraReady(mapOf("ready" to true))
       } catch (e: Exception) {
+        Log.e(TAG, "Camera could not start", e)
         onCameraError(mapOf("message" to (e.message ?: "The camera could not start.")))
       }
     }, ContextCompat.getMainExecutor(context))
@@ -216,50 +243,94 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
     }
   }
 
-  /** One full-resolution photo, rotated upright, saved as JPEG in the cache. */
+  /**
+   * One full-resolution photo, rotated upright, saved as JPEG in the cache.
+   * If the capture does not finish in time (some devices and emulators stall),
+   * the current preview frame is saved instead so the shutter never hangs.
+   */
   fun takePicture(promise: Promise) {
     val capture = imageCapture
     if (capture == null) {
       promise.reject("ERR_CAMERA_NOT_READY", "The camera is not ready yet.", null)
       return
     }
-    capture.takePicture(captureExecutor, object : ImageCapture.OnImageCapturedCallback() {
-      override fun onCaptureSuccess(image: ImageProxy) {
+    val settled = AtomicBoolean(false)
+    val main = Handler(Looper.getMainLooper())
+    val fallback = Runnable {
+      if (!settled.compareAndSet(false, true)) return@Runnable
+      Log.w(TAG, "Capture timed out; saving the preview frame")
+      val bitmap = previewView.bitmap
+      if (bitmap == null) {
+        promise.reject("ERR_CAPTURE", "The photo could not be taken.", null)
+        return@Runnable
+      }
+      captureExecutor.execute {
         try {
-          val buffer = image.planes[0].buffer
-          val bytes = ByteArray(buffer.remaining()).also { buffer.get(it) }
-          val rotation = image.imageInfo.rotationDegrees
-          image.close()
-          // Decode at up to ~3200 px (pages are stored at 2480 px), rotate upright.
-          val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-          BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-          var sample = 1
-          while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_PHOTO_EDGE) sample *= 2
-          val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-            ?: throw IllegalStateException("The photo could not be decoded.")
-          val upright = if (rotation % 360 != 0) {
-            val m = Matrix().apply { postRotate(rotation.toFloat()) }
-            Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true).also { if (it != decoded) decoded.recycle() }
-          } else decoded
-          val file = File(context.cacheDir, "scanpilot-capture-${System.currentTimeMillis()}.jpg")
-          FileOutputStream(file).use { upright.compress(Bitmap.CompressFormat.JPEG, 92, it) }
-          val result = mapOf("uri" to "file://${file.absolutePath}", "width" to upright.width, "height" to upright.height)
-          upright.recycle()
-          promise.resolve(result)
+          promise.resolve(saveJpeg(bitmap))
         } catch (e: Exception) {
           promise.reject("ERR_CAPTURE", e.message ?: "The photo could not be saved.", e)
         }
       }
+    }
+    main.postDelayed(fallback, CAPTURE_TIMEOUT_MS)
+    try {
+      capture.takePicture(captureExecutor, object : ImageCapture.OnImageCapturedCallback() {
+        override fun onCaptureSuccess(image: ImageProxy) {
+          if (settled.getAndSet(true)) {
+            image.close()
+            return
+          }
+          main.removeCallbacks(fallback)
+          try {
+            val buffer = image.planes[0].buffer
+            val bytes = ByteArray(buffer.remaining()).also { buffer.get(it) }
+            val rotation = image.imageInfo.rotationDegrees
+            image.close()
+            // Decode at up to ~3200 px (pages are stored at 2480 px), rotate upright.
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sample = 1
+            while (max(bounds.outWidth, bounds.outHeight) / (sample * 2) >= MAX_PHOTO_EDGE) sample *= 2
+            val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
+              ?: throw IllegalStateException("The photo could not be decoded.")
+            val upright = if (rotation % 360 != 0) {
+              val m = Matrix().apply { postRotate(rotation.toFloat()) }
+              Bitmap.createBitmap(decoded, 0, 0, decoded.width, decoded.height, m, true).also { if (it != decoded) decoded.recycle() }
+            } else decoded
+            promise.resolve(saveJpeg(upright))
+          } catch (e: Exception) {
+            Log.e(TAG, "Photo could not be saved", e)
+            promise.reject("ERR_CAPTURE", e.message ?: "The photo could not be saved.", e)
+          }
+        }
 
-      override fun onError(exception: ImageCaptureException) {
-        promise.reject("ERR_CAPTURE", exception.message ?: "The photo could not be taken.", exception)
-      }
-    })
+        override fun onError(exception: ImageCaptureException) {
+          Log.w(TAG, "Capture failed; using the preview frame", exception)
+          // Let the preview fallback answer straight away.
+          main.removeCallbacks(fallback)
+          main.post(fallback)
+        }
+      })
+    } catch (e: Exception) {
+      Log.w(TAG, "Capture could not start; using the preview frame", e)
+      main.removeCallbacks(fallback)
+      main.post(fallback)
+    }
+  }
+
+  private fun saveJpeg(bitmap: Bitmap): Map<String, Any> {
+    val file = File(context.cacheDir, "scanpilot-capture-${System.currentTimeMillis()}.jpg")
+    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+    val result = mapOf("uri" to "file://${file.absolutePath}", "width" to bitmap.width, "height" to bitmap.height)
+    bitmap.recycle()
+    return result
   }
 
   companion object {
     private const val TARGET_EDGE = 256
     private const val FRAME_INTERVAL_MS = 120L
     private const val MAX_PHOTO_EDGE = 3200
+    private const val CAPTURE_TIMEOUT_MS = 6000L
+    private const val TAG = "ScanPilotCamera"
   }
 }
