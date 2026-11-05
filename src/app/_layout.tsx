@@ -22,7 +22,7 @@ import { errorMessage } from '@/utils/errors';
 
 void SplashScreen.preventAutoHideAsync();
 
-export { ErrorBoundary } from 'expo-router';
+export { CrashScreen as ErrorBoundary } from '@/components/ui/CrashScreen';
 
 type BootState = { status: 'loading' } | { status: 'ready' } | { status: 'error'; message: string };
 

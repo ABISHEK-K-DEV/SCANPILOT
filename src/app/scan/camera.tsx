@@ -9,7 +9,7 @@ import { AppText, Button, Icon, type IconName } from '@/components/ui';
 import { CameraView, type FlashMode, useCameraPermissions } from '@/native/camera';
 import { hasCameraRequest, resolveCameraRequest } from '@/services/scan/cameraBridge';
 import { type ScanMode, SCAN_MODES, captureHint, scanMode } from '@/services/scan/modes';
-import { autoCropPage, filterImage, ingestImage, splitSpread } from '@/services/scan/pageProcessing';
+import { autoCropPage, filterImage, ingestImage, processCapturedPage, splitSpread } from '@/services/scan/pageProcessing';
 import { pickPages } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
 import { useGuideStore } from '@/stores/guideStore';
@@ -47,8 +47,16 @@ async function enhance(page: ScanPage, mode: ScanMode): Promise<ScanPage> {
 /** Photo → page(s): edge detection + perspective fix, book split, mode filter. */
 async function processPhoto(uri: string, mode: ScanMode, width?: number, height?: number): Promise<ScanPage[]> {
   const page = await ingestImage(uri, { deleteSource: true, width, height });
+  if (mode !== 'book') {
+    // One decode for detection, perspective fix and filter.
+    try {
+      return [await processCapturedPage(page, scanMode(mode).filter)];
+    } catch {
+      return [page];
+    }
+  }
   const cropped = await autoCropPage(page);
-  const pages = mode === 'book' && cropped.width > cropped.height ? await splitSpread(cropped) : [cropped];
+  const pages = cropped.width > cropped.height ? await splitSpread(cropped) : [cropped];
   const out: ScanPage[] = [];
   for (const p of pages) out.push(await enhance(p, mode));
   return out;

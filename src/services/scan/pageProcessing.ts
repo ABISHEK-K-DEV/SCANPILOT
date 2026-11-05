@@ -16,7 +16,7 @@ import { type Adjustments, adjust, applyFilter, type FilterId, toRgb } from './f
 import { detectDocumentQuad, rgbaToGray } from './detect';
 import { boundingRect, isAxisAlignedRect, isConvexQuad, outputSizeForQuad, type Quad, scaleQuad } from './geometry';
 import type { ScanPage } from './types';
-import { warpPerspective } from './warp';
+import { type RgbaImage, warpPerspective } from './warp';
 
 /** Long-edge cap for working images (~210 dpi on A4) — readable text, bounded memory. */
 export const MAX_PAGE_EDGE = 2480;
@@ -172,25 +172,81 @@ const DETECT_EDGE = 320;
  * page unchanged when no page is found with confidence (the user can still
  * drag the corners in the crop editor). `originalUri` keeps the full photo.
  */
+/** Finds the page outline in image pixel coordinates (via a small preview), or null. */
+async function detectPageQuad(page: ScanPage): Promise<Quad | null> {
+  const small = await render(page.uri, (ctx) => {
+    ctx.resize(page.width >= page.height ? { width: DETECT_EDGE } : { height: DETECT_EDGE });
+  });
+  try {
+    const decoded = decodeJpeg(await new File(small.uri).bytes(), { useTArray: true, formatAsRGBA: true });
+    const detection = detectDocumentQuad(rgbaToGray(decoded.data, decoded.width, decoded.height), decoded.width, decoded.height);
+    return detection ? scaleQuad(detection.quad, page.width / small.width, page.height / small.height) : null;
+  } finally {
+    deleteFileQuietly(small.uri);
+  }
+}
+
 export async function autoCropPage(page: ScanPage): Promise<ScanPage> {
   try {
-    const small = await render(page.uri, (ctx) => {
-      ctx.resize(page.width >= page.height ? { width: DETECT_EDGE } : { height: DETECT_EDGE });
-    });
-    let detection: ReturnType<typeof detectDocumentQuad> = null;
-    try {
-      const decoded = decodeJpeg(await new File(small.uri).bytes(), { useTArray: true, formatAsRGBA: true });
-      detection = detectDocumentQuad(rgbaToGray(decoded.data, decoded.width, decoded.height), decoded.width, decoded.height);
-    } finally {
-      deleteFileQuietly(small.uri);
-    }
-    if (!detection) return page;
-    const quad = scaleQuad(detection.quad, page.width / small.width, page.height / small.height);
+    const quad = await detectPageQuad(page);
+    if (!quad) return page;
     const cropped = await cropImage(page, quad);
     return { ...page, uri: cropped.uri, width: cropped.width, height: cropped.height };
   } catch {
     return page;
   }
+}
+
+async function writeRgb(rgb: { width: number; height: number; data: Uint8Array }): Promise<SavedImage> {
+  const bmp = new File(sessionDir(), `${createId()}.bmp`);
+  bmp.create({ overwrite: true });
+  await bmp.write(encodeBmp24(rgb));
+  try {
+    return await render(bmp.uri, () => undefined);
+  } finally {
+    deleteFileQuietly(bmp.uri);
+  }
+}
+
+function rgbToRgba(rgb: { width: number; height: number; data: Uint8Array }): RgbaImage {
+  const out = new Uint8Array(rgb.width * rgb.height * 4);
+  for (let i = 0, o = 0; i < rgb.data.length; i += 3, o += 4) {
+    out[o] = rgb.data[i];
+    out[o + 1] = rgb.data[i + 1];
+    out[o + 2] = rgb.data[i + 2];
+    out[o + 3] = 255;
+  }
+  return { width: rgb.width, height: rgb.height, data: out };
+}
+
+/**
+ * Camera pipeline in one decode: detect the page → perspective-correct →
+ * filter. Decoding the full photo once (instead of once for the crop and
+ * again for the filter) roughly halves the time per page on slow phones.
+ * The unfiltered, cropped page is kept as `base` so Filter → Original works.
+ */
+export async function processCapturedPage(page: ScanPage, filter: FilterId): Promise<ScanPage> {
+  let quad: Quad | null = null;
+  try {
+    quad = await detectPageQuad(page);
+  } catch {
+    quad = null;
+  }
+  await nextFrame();
+  const decoded = decodeJpeg(await new File(page.uri).bytes(), { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 256 });
+  await nextFrame();
+  let base: RgbaImage = decoded;
+  let baseSaved: SavedImage = { uri: page.uri, width: page.width, height: page.height };
+  if (quad && isConvexQuad(quad)) {
+    const warped = warpPerspective(decoded, quad, outputSizeForQuad(quad, MAX_PAGE_EDGE));
+    baseSaved = await writeRgb(warped);
+    base = rgbToRgba(warped);
+  }
+  const cropped: ScanPage = { ...page, uri: baseSaved.uri, width: baseSaved.width, height: baseSaved.height };
+  if (filter === 'original') return cropped;
+  await nextFrame();
+  const filtered = await writeRgb(toRgb(applyFilter(base, filter)));
+  return { ...cropped, uri: filtered.uri, width: filtered.width, height: filtered.height, base: { uri: baseSaved.uri, width: baseSaved.width, height: baseSaved.height }, filter };
 }
 
 /** Small previews of every filter for the review screen's filter strip. */

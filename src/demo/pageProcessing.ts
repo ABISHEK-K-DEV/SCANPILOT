@@ -27,3 +27,6 @@ export async function filterPreviews(uri: string, filters: readonly string[]): P
 export async function splitSpread(page: ScanPage): Promise<[ScanPage, ScanPage]> {
   return [page, { ...page, id: `${page.id}-r` }];
 }
+export async function processCapturedPage(page: ScanPage): Promise<ScanPage> {
+  return page;
+}

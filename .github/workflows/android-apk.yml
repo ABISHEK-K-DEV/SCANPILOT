@@ -1,9 +1,14 @@
 # Builds an installable, standalone ScanPilot APK (JavaScript bundled inside,
 # no Metro/dev server needed) and publishes it as a workflow artifact.
 #
-# The release build is signed with the Expo template's public debug keystore:
-# fine for sideloading and testing, NOT for Google Play (use EAS / your own
-# upload key for that).
+# Release builds have no INTERNET permission (SCANPILOT_OFFLINE=1) and use the
+# run number as versionCode.
+#
+# Signing: when the repository secrets SCANPILOT_UPLOAD_KEYSTORE_BASE64,
+# SCANPILOT_UPLOAD_STORE_PASSWORD, SCANPILOT_UPLOAD_KEY_ALIAS and
+# SCANPILOT_UPLOAD_KEY_PASSWORD are set, the APK and a Play Store AAB are
+# signed with that upload key (see docs/RELEASE.md). Without them the APK is
+# signed with the public debug key: fine for sideloading, not for Google Play.
 name: Android APK
 
 on:
@@ -69,6 +74,21 @@ jobs:
         run: npx expo prebuild --platform android --no-install
         env:
           CI: '1'
+          SCANPILOT_OFFLINE: '1'
+          SCANPILOT_VERSION_CODE: ${{ github.run_number }}
+
+      - name: Prepare upload key (if configured)
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.SCANPILOT_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+            echo "store=$RUNNER_TEMP/upload.keystore" >> "$GITHUB_OUTPUT"
+            echo "Signing with the upload key."
+          else
+            echo "::notice::No upload key secrets set; the APK is signed with the debug key (sideloading only)."
+          fi
 
       - uses: gradle/actions/setup-gradle@v4
 
@@ -76,8 +96,12 @@ jobs:
         working-directory: android
         env:
           NODE_ENV: production
+          SCANPILOT_UPLOAD_STORE_FILE: ${{ steps.signing.outputs.store }}
+          SCANPILOT_UPLOAD_STORE_PASSWORD: ${{ secrets.SCANPILOT_UPLOAD_STORE_PASSWORD }}
+          SCANPILOT_UPLOAD_KEY_ALIAS: ${{ secrets.SCANPILOT_UPLOAD_KEY_ALIAS }}
+          SCANPILOT_UPLOAD_KEY_PASSWORD: ${{ secrets.SCANPILOT_UPLOAD_KEY_PASSWORD }}
         run: >
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew assembleRelease ${{ steps.signing.outputs.store && 'bundleRelease' || '' }} --no-daemon --stacktrace
           -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
           -Pandroid.enableMinifyInReleaseBuilds=false
           -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g"
@@ -87,11 +111,16 @@ jobs:
           VERSION=$(node -p "require('./app.json').expo.version")
           mkdir -p dist-apk
           cp android/app/build/outputs/apk/release/app-release.apk "dist-apk/ScanPilot-${VERSION}-${GITHUB_SHA::7}.apk"
+          if [ -f android/app/build/outputs/bundle/release/app-release.aab ]; then
+            cp android/app/build/outputs/bundle/release/app-release.aab "dist-apk/ScanPilot-${VERSION}-${GITHUB_SHA::7}.aab"
+          fi
           ls -lh dist-apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: ScanPilot-apk
-          path: dist-apk/*.apk
+          path: |
+            dist-apk/*.apk
+            dist-apk/*.aab
           if-no-files-found: error
           retention-days: 30

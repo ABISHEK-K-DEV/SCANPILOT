@@ -5,7 +5,7 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', 'android/*', 'ios/*', '.expo/*', 'coverage/*', 'scripts/*'],
+    ignores: ['dist/*', 'android/*', 'ios/*', '.expo/*', '.demo-web/*', 'coverage/*', 'scripts/*'],
   },
   {
     // Type-aware rules: un-awaited file-system/database promises are a common source of data loss.

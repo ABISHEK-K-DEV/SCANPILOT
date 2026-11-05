@@ -12,7 +12,7 @@ Offline-first document scanner & PDF editor. Expo SDK 58, React Native 0.88 (New
 - Every button must work; unavailable features are shown disabled with a "Soon" badge (`src/features/tools.ts`).
 - Always include loading, empty and error states. Icon-only controls need `accessibilityLabel`.
 - `expo-file-system` `File.write/move/copy` return promises — always await (lint enforces this).
-- Work on the `main` branch (the only branch); every push to `main` builds the APK.
+- Work on the `main` branch (the only branch); every push to `main` builds the APK (and a signed AAB when the upload-key secrets exist — `docs/RELEASE.md`). CI release builds have **no INTERNET permission**; never add a feature that needs the network.
 - In `app.json`, keep `react-native-document-scanner-plugin` and `expo-camera` **before** `expo-image-picker` (Info.plist mods run in reverse order). **Never** set image-picker's `cameraPermission` to `false`: on Android that blocks `android.permission.CAMERA` (`tools:node="remove"`) and ScanPilot's camera can no longer get access. `src/__tests__/appConfig.test.ts` guards this.
 - Android native code lives in `modules/scanpilot-native` (Kotlin, Expo Modules API). It is compiled only by the GitHub Actions APK workflow — check that run after changing it.
 - Expo APIs change every SDK: check the installed package's `.d.ts` files rather than memory.

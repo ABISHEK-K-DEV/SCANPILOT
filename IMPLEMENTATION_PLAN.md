@@ -109,6 +109,14 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (what you may do, the one condition) and the full text. Third-party licences are listed in `THIRD_PARTY_NOTICES.md`.
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+## Release readiness & robustness ✅
+- **Edge detection v2** (`services/scan/detect.ts`): when the page is not clearly brighter than the background (white paper on a light table), an edge method scans inward from each border for the first strong gradient, fits one line per side with RANSAC + least squares, and intersects them. Tested on synthetic low-contrast pages with text; ~2 px corner error on a white-on-white test image.
+- **Faster camera pipeline**: `processCapturedPage` decodes each photo once for detection → perspective fix → filter (previously decoded twice).
+- **Release builds**: no INTERNET permission (`SCANPILOT_OFFLINE=1`, `app.config.js`), versionCode = CI run number, release signing with your upload key from GitHub secrets via `plugins/withReleaseSigning.js`, plus a Play-ready **AAB** when signed. See `docs/RELEASE.md`.
+- **Crash screen**: a screen that throws shows a branded recovery page (Try again / Go to Home) instead of the default error view.
+- **Store paperwork**: `docs/PRIVACY_POLICY.md` with the Google Play Data-safety answers.
+- Still to do outside this repo: test on 2–3 real phones (one low-end); iOS native renderer/OCR (needs a Mac to build).
+
 ## New icon, motion, tool guides ✅
 - **Icon**: "aurora" mark — indigo → violet squircle with cyan and pink glows and a glossy top light, two stacked pages with depth, a glowing scan beam and scan corners. One source (`src/components/brand/logoSvg.ts`) drives the in-app logo (`SvgXml`) and the launcher, adaptive, monochrome, splash and favicon images (`node scripts/brand/render-icons.mjs`).
 - **Motion while scanning**: scan line sweeping inside the frame, breathing frame corners, frame reshaping when the mode changes, captured photo flying into the page stack, page-count pop; review screen crossfades pages and animates panel/filter changes.

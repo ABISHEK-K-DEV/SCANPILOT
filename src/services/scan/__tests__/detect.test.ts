@@ -2,10 +2,10 @@ import { detectDocumentQuad, otsuThreshold, rgbaToGray } from '../detect';
 import type { Point } from '../geometry';
 
 /** Paints a filled convex polygon (bright paper) onto a dark, noisy background. */
-function scene(width: number, height: number, poly: Point[], paper = 225, background = 60): Uint8Array {
+function scene(width: number, height: number, poly: Point[], paper = 225, background = 60, noiseAmp = 10): Uint8Array {
   const gray = new Uint8Array(width * height);
   let seed = 7;
-  const noise = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) % 21) - 10;
+  const noise = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) % (noiseAmp * 2 + 1)) - noiseAmp;
   const inside = (x: number, y: number) => {
     let sign = 0;
     for (let i = 0; i < poly.length; i += 1) {
@@ -54,6 +54,21 @@ describe('document edge detection', () => {
     const result = detectDocumentQuad(scene(240, 300, corners), 240, 300);
     expect(result).not.toBeNull();
     result!.quad.forEach((p, i) => expect(near(p, corners[i], 3)).toBe(true));
+  });
+
+  it('finds white paper on a light table (low contrast) with text on it', () => {
+    const corners = [
+      { x: 40, y: 34 },
+      { x: 200, y: 44 },
+      { x: 192, y: 266 },
+      { x: 30, y: 256 },
+    ];
+    const gray = scene(240, 300, corners, 236, 214, 3);
+    // Dark text lines inside the page must not be mistaken for its edges.
+    for (let row = 80; row < 220; row += 18) for (let x = 70; x < 160; x += 1) gray[row * 240 + x] = 40;
+    const result = detectDocumentQuad(gray, 240, 300);
+    expect(result).not.toBeNull();
+    result!.quad.forEach((p, i) => expect(near(p, corners[i], 5)).toBe(true));
   });
 
   it('returns null for a blank frame', () => {

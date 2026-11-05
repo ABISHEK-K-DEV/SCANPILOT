@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import CameraScreen from '@/app/scan/camera';
 import { useCameraPermissions } from '@/native/camera';
 import { waitForCameraPages } from '@/services/scan/cameraBridge';
-import { autoCropPage, filterImage } from '@/services/scan/pageProcessing';
+import { processCapturedPage } from '@/services/scan/pageProcessing';
 import { useScanSession } from '@/stores/scanSessionStore';
 
 const mockParams: { mode?: string; replace?: string } = {};
@@ -37,6 +37,7 @@ jest.mock('@/services/scan/pageProcessing', () => ({
   deleteFileQuietly: jest.fn(),
   ingestImage: jest.fn(async (uri: string) => ({ id: 'p1', uri, width: 3000, height: 4000, originalUri: uri, originalWidth: 3000, originalHeight: 4000 })),
   autoCropPage: jest.fn(async (page: object) => ({ ...page, uri: 'cropped.jpg', width: 2000, height: 2800 })),
+  processCapturedPage: jest.fn(async (page: object, filter: string) => ({ ...page, uri: 'enhanced.jpg', width: 2000, height: 2800, base: { uri: 'cropped.jpg', width: 2000, height: 2800 }, filter })),
   filterImage: jest.fn(async () => ({ uri: 'enhanced.jpg', width: 2000, height: 2800 })),
 }));
 jest.mock('@/services/scan/scanService', () => ({ pickPages: jest.fn(async () => null) }));
@@ -64,8 +65,7 @@ describe('ScanPilot camera', () => {
     await render(<CameraScreen />, { wrapper });
     await fireEvent.press(screen.getByLabelText('Take photo'));
     await waitFor(() => expect(screen.getByLabelText('Done, 1 page')).toBeTruthy());
-    expect(autoCropPage).toHaveBeenCalledTimes(1);
-    expect(filterImage).toHaveBeenCalledWith('cropped.jpg', 'auto');
+    expect(processCapturedPage).toHaveBeenCalledWith(expect.objectContaining({ uri: 'photo.jpg' }), 'auto');
     await fireEvent.press(screen.getByLabelText('Done, 1 page'));
     await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith('/scan/review'));
     const [added] = useScanSession.getState().pages;

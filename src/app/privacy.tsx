@@ -22,7 +22,7 @@ const POINTS: { icon: IconName; title: string; body: string }[] = [
   {
     icon: 'hand-left-outline',
     title: 'Minimal permissions',
-    body: 'Imports use the system file and photo pickers, so ScanPilot only sees the files you select. It never asks for access to all your storage.',
+    body: 'Release builds have no internet permission at all, so the app cannot send anything. The camera is used only while you scan, and imports use the system pickers — ScanPilot only sees the files you select, never your whole storage.',
   },
   {
     icon: 'archive-outline',
