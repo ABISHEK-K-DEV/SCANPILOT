@@ -55,7 +55,7 @@ export function FilterStrip({ page, onSelect, onApplyToAll, busy }: FilterStripP
             accessibilityRole="radio"
             accessibilityLabel={`${f.label} filter`}
             accessibilityState={{ selected, disabled: !!busy }}
-            style={({ pressed }) => [styles.item, { opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [styles.item, { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.94 : selected ? 1.05 : 1 }] }]}
           >
             <View
               style={[
@@ -63,7 +63,7 @@ export function FilterStrip({ page, onSelect, onApplyToAll, busy }: FilterStripP
                 { borderRadius: radius.md, borderColor: selected ? colors.primary : colors.border, backgroundColor: colors.surfaceAlt },
               ]}
             >
-              {uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" /> : <ActivityIndicator color={colors.textSubtle} size="small" />}
+              {uri ? <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" transition={200} /> : <ActivityIndicator color={colors.textSubtle} size="small" />}
               {selected ? (
                 <View style={[styles.check, { backgroundColor: colors.primary }]}>
                   <Icon name="checkmark" size={12} color={colors.onPrimary} strokeWidth={3} />

@@ -109,6 +109,11 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (what you may do, the one condition) and the full text. Third-party licences are listed in `THIRD_PARTY_NOTICES.md`.
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+## New icon, motion, tool guides ✅
+- **Icon**: "aurora" mark — indigo → violet squircle with cyan and pink glows and a glossy top light, two stacked pages with depth, a glowing scan beam and scan corners. One source (`src/components/brand/logoSvg.ts`) drives the in-app logo (`SvgXml`) and the launcher, adaptive, monochrome, splash and favicon images (`node scripts/brand/render-icons.mjs`).
+- **Motion while scanning**: scan line sweeping inside the frame, breathing frame corners, frame reshaping when the mode changes, captured photo flying into the page stack, page-count pop; review screen crossfades pages and animates panel/filter changes.
+- **Tool guides** (`features/toolGuides.ts`, `components/guide/`): every tool and scan mode has a "How it works" sheet with an animated 2.5D demo (tilted pages, scan beam, merging/splitting pages, a signature drawing itself, a lock dropping on, …) and three steps that highlight in turn. Shown the first time a tool opens, replayable from the **?** button (tool headers, camera) and from **Settings → Tool guides**; seen guides are stored in settings.
+
 ### Camera permission fix (found on a real device)
 The camera screen showed "Allow the camera", but Android's app info listed *No permissions requested*: `expo-image-picker` was configured with `cameraPermission: false`, which **blocks** `android.permission.CAMERA` in the merged manifest. It now carries a usage string instead; the generated manifest was checked with `expo config --type introspect`, and `appConfig.test.ts` prevents a regression.
 

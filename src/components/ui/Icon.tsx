@@ -109,6 +109,7 @@ import Sheet from 'lucide-react-native/icons/sheet';
 import Mail from 'lucide-react-native/icons/mail';
 import Phone from 'lucide-react-native/icons/phone';
 import Globe from 'lucide-react-native/icons/globe';
+import CircleHelp from 'lucide-react-native/icons/circle-question-mark';
 import UserRound from 'lucide-react-native/icons/user-round';
 import ZapOff from 'lucide-react-native/icons/zap-off';
 
@@ -204,6 +205,7 @@ const ICONS = {
   mail: { c: Mail },
   phone: { c: Phone },
   globe: { c: Globe },
+  'help-circle-outline': { c: CircleHelp },
   person: { c: UserRound },
   'flash-off': { c: ZapOff },
   'arrow-undo-outline': { c: RotateCcw },

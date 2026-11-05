@@ -13,6 +13,8 @@ export interface AppSettings {
   /** Require fingerprint/face/PIN when opening the app. */
   appLock: boolean;
   scanner: ScannerPreference;
+  /** Tool guides already shown (ids from features/toolGuides). */
+  seenGuides: string[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -22,4 +24,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   sort: { field: 'date', direction: 'desc' },
   appLock: false,
   scanner: 'camera',
+  seenGuides: [],
 };

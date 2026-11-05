@@ -1,3 +1,4 @@
+import { TOOL_GUIDES } from '@/features/toolGuides';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { type AppSettings, DEFAULT_SETTINGS } from '@/types/settings';
 
@@ -39,6 +40,8 @@ export async function loadSettings(): Promise<AppSettings> {
     onboardingComplete: params.get('onboarding') !== '1',
     theme: (params.get('theme') as AppSettings['theme']) ?? 'light',
     viewMode: params.get('view') === 'list' ? 'list' : 'grid',
+    // Tool guides open automatically on first use; screenshots only want them with ?guides=1.
+    seenGuides: params.get('guides') === '1' ? [] : Object.keys(TOOL_GUIDES),
   };
 }
 

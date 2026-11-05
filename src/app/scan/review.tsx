@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router, Stack, usePreventRemove } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { LayoutAnimation, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BusinessCardPanel } from '@/components/scan/BusinessCardPanel';
@@ -207,6 +207,7 @@ export default function ScanReviewScreen() {
             source={{ uri: page.uri }}
             style={styles.flex}
             contentFit="contain"
+            transition={{ duration: 220, effect: 'cross-dissolve' }}
             recyclingKey={page.uri}
             accessible
             accessibilityLabel={`Page ${index + 1} of ${pages.length}`}
@@ -257,7 +258,10 @@ export default function ScanReviewScreen() {
           return (
             <Pressable
               key={tab.id}
-              onPress={() => setPanel(tab.id)}
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.create(200, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.opacity));
+                setPanel(tab.id);
+              }}
               accessibilityRole="tab"
               accessibilityLabel={tab.label}
               accessibilityState={{ selected: active }}

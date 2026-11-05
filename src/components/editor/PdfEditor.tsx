@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { ToolbarButton } from '@/components/scan/ToolbarButton';
+import { GuideButton } from '@/components/guide/ToolGuide';
 import { DocumentSelectModal } from '@/components/tools/DocumentSelectModal';
 import { ChooseDocumentCard } from '@/components/tools/DocumentSources';
 import { AppText, Button, EmptyState, IconButton, type IconName, LoadingState, ProgressOverlay, Screen, TextPromptModal } from '@/components/ui';
@@ -208,7 +209,7 @@ export function PdfEditor({ mode }: { mode: EditorMode }) {
                 <Button label="Save" compact disabled={!dirty} onPress={() => void save()} />
               </View>
             )
-          : undefined,
+          : () => <GuideButton />,
       }}
     />
   );

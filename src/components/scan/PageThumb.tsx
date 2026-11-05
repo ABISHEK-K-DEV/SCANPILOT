@@ -20,12 +20,13 @@ export function PageThumb({ page, index, selected, onPress }: PageThumbProps) {
       accessibilityRole="button"
       accessibilityLabel={`Page ${index + 1}`}
       accessibilityState={{ selected }}
-      style={[
+      style={({ pressed }) => [
         styles.thumb,
+        { transform: [{ scale: pressed ? 0.94 : selected ? 1.04 : 1 }] },
         { borderRadius: radius.sm + 2, borderColor: selected ? colors.primary : colors.border, backgroundColor: colors.surface },
       ]}
     >
-      <Image source={{ uri: page.uri }} style={styles.image} contentFit="cover" recyclingKey={page.uri} />
+      <Image source={{ uri: page.uri }} style={styles.image} contentFit="cover" transition={160} recyclingKey={page.uri} />
       <View style={[styles.badge, { backgroundColor: selected ? colors.primary : 'rgba(15,23,42,0.7)', borderRadius: radius.pill }]}>
         <AppText variant="label" color="#FFFFFF">
           {index + 1}

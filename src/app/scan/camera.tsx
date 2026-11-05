@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, AppState, Linking, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, AppState, Easing, LayoutAnimation, Linking, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, Icon, type IconName } from '@/components/ui';
@@ -12,6 +12,7 @@ import { type ScanMode, SCAN_MODES, captureHint, scanMode } from '@/services/sca
 import { autoCropPage, filterImage, ingestImage, splitSpread } from '@/services/scan/pageProcessing';
 import { pickPages } from '@/services/scan/scanService';
 import type { ScanPage } from '@/services/scan/types';
+import { useGuideStore } from '@/stores/guideStore';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { errorMessage } from '@/utils/errors';
 import { appAlert } from '@/stores/dialogStore';
@@ -75,6 +76,8 @@ export default function CameraScreen() {
     () => params.scanMode ?? (mode === 'append' || mode === 'replace' ? useScanSession.getState().mode : 'document'),
   );
   const def = scanMode(captureMode);
+  const openGuide = useGuideStore((st) => st.open);
+  const guideId = captureMode === 'document' ? 'camera' : `scan-${captureMode}`;
   const modeBar = useRef<ScrollViewInstance>(null);
   const modeX = useRef<Record<string, { x: number; width: number }>>({});
   const [barWidth, setBarWidth] = useState(0);
@@ -102,6 +105,29 @@ export default function CameraScreen() {
   const [finishing, setFinishing] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const [flashOverlay] = useState(() => new Animated.Value(0));
+  // Motion: scan line in the frame, breathing corners, captured photo flying to the stack, count pop.
+  const [sweep] = useState(() => new Animated.Value(0));
+  const [breathe] = useState(() => new Animated.Value(0));
+  const [fly] = useState(() => new Animated.Value(0));
+  const [pop] = useState(() => new Animated.Value(1));
+  const [flyUri, setFlyUri] = useState<string | null>(null);
+  const [guideHeight, setGuideHeight] = useState(0);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    const a = Animated.loop(Animated.timing(sweep, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.quad), useNativeDriver: true }));
+    const b = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    a.start();
+    b.start();
+    return () => {
+      a.stop();
+      b.stop();
+    };
+  }, [sweep, breathe]);
   const done = useRef(false);
   const [finished, setFinished] = useState(false);
 
@@ -175,12 +201,19 @@ export default function CameraScreen() {
     setShooting(true);
     flashOverlay.setValue(1);
     Animated.timing(flashOverlay, { toValue: 0, duration: 260, useNativeDriver: true }).start();
+    const flyAway = (uri: string) => {
+      setFlyUri(uri);
+      fly.setValue(0);
+      Animated.timing(fly, { toValue: 1, duration: 520, easing: Easing.in(Easing.cubic), useNativeDriver: true }).start(() => setFlyUri(null));
+    };
     try {
       if (DEMO) {
+        flyAway('/demo-assets/scan/page-2.jpg');
         await enqueue(() => processPhoto('/demo-assets/scan/page-2.jpg', captureMode));
       } else {
         const photo = await camera.current?.takePictureAsync({ quality: 0.92, exif: false });
         if (!photo) return;
+        flyAway(photo.uri);
         const task = enqueue(() => processPhoto(photo.uri, captureMode, photo.width, photo.height));
         if (single) {
           await task;
@@ -191,6 +224,17 @@ export default function CameraScreen() {
     } finally {
       setShooting(false);
     }
+  };
+
+  useEffect(() => {
+    if (pages.length === 0) return;
+    pop.setValue(1.45);
+    Animated.spring(pop, { toValue: 1, friction: 4, tension: 160, useNativeDriver: true }).start();
+  }, [pages.length, pop]);
+
+  const switchMode = (id: ScanMode) => {
+    LayoutAnimation.configureNext(LayoutAnimation.create(240, LayoutAnimation.Types.easeInEaseOut, LayoutAnimation.Properties.scaleXY));
+    setCaptureMode(id);
   };
 
   // Retake finishes after one page; ID cards after front + back.
@@ -216,6 +260,7 @@ export default function CameraScreen() {
         </AppText>
       </View>
       <View style={styles.topRight}>
+        <RoundButton icon="help-circle-outline" label="How scanning works" onPress={() => openGuide(guideId)} />
         <RoundButton icon="grid-3x3" label={grid ? 'Hide grid' : 'Show grid'} active={grid} onPress={() => setGrid((g) => !g)} />
         <RoundButton
           icon={flash === 'off' ? 'flash-off' : 'flash'}
@@ -267,7 +312,7 @@ export default function CameraScreen() {
     <View style={[styles.fill, { backgroundColor: INK }]}>
       <Stack.Screen options={{ headerShown: false, animation: 'fade' }} />
       <StatusBar style="light" />
-      <View style={styles.fill}>
+      <View style={styles.fill} onLayout={(e) => setStageSize({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}>
         {DEMO ? (
           <Image source={{ uri: '/demo-assets/scan/photo-3.jpg' }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
@@ -288,13 +333,31 @@ export default function CameraScreen() {
 
         {/* Page frame guide */}
         <View style={[StyleSheet.absoluteFill, styles.guideWrap]} pointerEvents="none">
-          <View style={[styles.guide, def.aspect >= 1 ? { width: '88%', aspectRatio: def.aspect } : { width: '80%', aspectRatio: def.aspect }]}>
+          <Animated.View
+            onLayout={(e) => setGuideHeight(e.nativeEvent.layout.height)}
+            style={[
+              styles.guide,
+              def.aspect >= 1 ? { width: '88%', aspectRatio: def.aspect } : { width: '80%', aspectRatio: def.aspect },
+              { transform: [{ scale: breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.015] }) }] },
+            ]}
+          >
             {captureMode === 'book' ? <View style={styles.spine} /> : null}
+            {guideHeight > 0 && ready ? (
+              <Animated.View
+                style={[
+                  styles.sweep,
+                  {
+                    opacity: sweep.interpolate({ inputRange: [0, 0.1, 0.9, 1], outputRange: [0, 0.9, 0.9, 0] }),
+                    transform: [{ translateY: sweep.interpolate({ inputRange: [0, 1], outputRange: [8, guideHeight - 8] }) }],
+                  },
+                ]}
+              />
+            ) : null}
             <View style={[styles.corner, styles.tl]} />
             <View style={[styles.corner, styles.tr]} />
             <View style={[styles.corner, styles.bl]} />
             <View style={[styles.corner, styles.br]} />
-          </View>
+          </Animated.View>
           <View style={styles.hint}>
             <AppText variant="caption" color="#FFFFFF" style={styles.bold}>
               {ready ? captureHint(captureMode, pages.length) : 'Starting camera…'}
@@ -303,6 +366,29 @@ export default function CameraScreen() {
         </View>
 
         <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.flash, { opacity: flashOverlay }]} />
+        {flyUri && stageSize.width > 0 ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.flyer,
+              {
+                width: stageSize.width * 0.6,
+                height: stageSize.width * 0.8,
+                left: stageSize.width * 0.2,
+                top: stageSize.height * 0.5 - stageSize.width * 0.4,
+                opacity: fly.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] }),
+                transform: [
+                  { translateX: fly.interpolate({ inputRange: [0, 1], outputRange: [0, stageSize.width * 0.33] }) },
+                  { translateY: fly.interpolate({ inputRange: [0, 1], outputRange: [0, stageSize.height * 0.5 + 40] }) },
+                  { scale: fly.interpolate({ inputRange: [0, 1], outputRange: [1, 0.12] }) },
+                  { rotate: fly.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-8deg'] }) },
+                ],
+              },
+            ]}
+          >
+            <Image source={{ uri: flyUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          </Animated.View>
+        ) : null}
         {top}
       </View>
 
@@ -324,7 +410,7 @@ export default function CameraScreen() {
               return (
                 <Pressable
                   key={m.id}
-                  onPress={() => setCaptureMode(m.id)}
+                  onPress={() => switchMode(m.id)}
                   onLayout={(e) => {
                     modeX.current[m.id] = { x: e.nativeEvent.layout.x, width: e.nativeEvent.layout.width };
                     if (m.id === captureMode && barWidth) modeBar.current?.scrollTo({ x: Math.max(0, e.nativeEvent.layout.x + e.nativeEvent.layout.width / 2 - barWidth / 2), animated: false });
@@ -381,11 +467,11 @@ export default function CameraScreen() {
                 ) : null}
               </View>
               {pages.length > 0 ? (
-                <View style={styles.count}>
+                <Animated.View style={[styles.count, { transform: [{ scale: pop }] }]}>
                   <AppText variant="label" color="#FFFFFF">
                     {pages.length}
                   </AppText>
-                </View>
+                </Animated.View>
               ) : null}
             </View>
             <AppText variant="label" color={pages.length > 0 ? '#FFFFFF' : '#A7AFBE'}>
@@ -416,6 +502,8 @@ const styles = StyleSheet.create({
   tr: { top: 0, right: 0, borderTopWidth: 4, borderRightWidth: 4, borderTopRightRadius: 12 },
   bl: { bottom: 0, left: 0, borderBottomWidth: 4, borderLeftWidth: 4, borderBottomLeftRadius: 12 },
   br: { bottom: 0, right: 0, borderBottomWidth: 4, borderRightWidth: 4, borderBottomRightRadius: 12 },
+  sweep: { position: 'absolute', left: 10, right: 10, top: 0, height: 2.5, borderRadius: 2, backgroundColor: '#5EEAD4', shadowColor: '#5EEAD4', shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
+  flyer: { position: 'absolute', borderRadius: 10, overflow: 'hidden', borderWidth: 3, borderColor: '#FFFFFF' },
   spine: { position: 'absolute', top: '6%', bottom: '6%', left: '50%', width: 2, marginLeft: -1, backgroundColor: 'rgba(94,234,212,0.7)' },
   modesWrap: { flexGrow: 0, marginBottom: 16 },
   modes: { paddingHorizontal: 16, gap: 6, alignItems: 'center', flexGrow: 1, justifyContent: 'center' },

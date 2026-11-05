@@ -37,6 +37,7 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Import PDFs (multi-select, header validation) and convert photos to a PDF (ordered multi-select, resized & re-encoded on device).
 * Native PDF viewer with page indicator, password-protected PDF support, page-count backfill.
 * Document actions: share, save to device (Android folder picker), rename, favourite, move, duplicate, delete.
+* New aurora app icon; animated scanning (sweeping scan line, photos flying into the page stack); animated "How it works" guides for every tool (first use, the ? button, Settings → Tool guides).
 * Scan modes: Document, Whiteboard, Book (auto page split), ID card (both sides on one A4 page), Business card (read and save as a contact).
 * PDF → PowerPoint and PDF → Excel (on-device), editable OCR text from camera, photos or PDFs.
 * In-app confirmation dialogs and toasts, skeleton loading.

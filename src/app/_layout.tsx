@@ -10,6 +10,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { BootScreen } from '@/components/brand/BootScreen';
+import { GuideButton, ToolGuideHost } from '@/components/guide/ToolGuide';
 import { LockScreen, useAppLockWatcher } from '@/components/security/LockScreen';
 import { DialogHost, ErrorState } from '@/components/ui';
 import { getDatabase } from '@/db/database';
@@ -93,14 +94,16 @@ export default function RootLayout() {
     <ThemeProvider value={navigationTheme}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       <Stack
-        screenOptions={{
+        screenOptions={({ route }) => ({
+          // Every tool gets a "How it works" button (screens with their own header buttons add it themselves).
+          headerRight: route.name.startsWith('tool/') ? () => <GuideButton /> : undefined,
           headerTintColor: theme.colors.primary,
           headerTitleStyle: { color: theme.colors.text, fontFamily: theme.typography.heading.fontFamily, fontSize: 17 },
           headerStyle: { backgroundColor: theme.colors.background },
           headerShadowVisible: false,
           contentStyle: { backgroundColor: theme.colors.background },
           headerBackButtonDisplayMode: 'minimal',
-        }}
+        })}
       >
         <Stack.Protected guard={onboardingComplete}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -132,6 +135,7 @@ export default function RootLayout() {
             options={{ title: 'Adjust corners', headerStyle: { backgroundColor: '#0B0D12' }, headerTintColor: '#FFFFFF', headerTitleStyle: { color: '#FFFFFF' } }}
           />
           <Stack.Screen name="licenses" options={{ title: 'Licence' }} />
+          <Stack.Screen name="guides" options={{ title: 'Tool guides' }} />
           <Stack.Screen name="privacy" options={{ title: 'Privacy' }} />
         </Stack.Protected>
         <Stack.Protected guard={!onboardingComplete}>
@@ -139,6 +143,7 @@ export default function RootLayout() {
         </Stack.Protected>
       </Stack>
       {appLock && locked ? <LockScreen /> : null}
+      <ToolGuideHost />
       <DialogHost />
     </ThemeProvider>
   );

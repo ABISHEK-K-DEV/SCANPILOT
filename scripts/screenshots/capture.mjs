@@ -203,6 +203,10 @@ const shots = [
   ['64-pdf-to-excel', '/tool/pdf-to-office?format=xlsx'],
   ['65-ocr-camera', '/tool/ocr'],
   ['66-tools-scan-modes', '/tools', async (p) => p.mouse.wheel(0, 300)],
+  ['67-guide-sign', '/tool/sign?guides=1', async (p) => p.waitForTimeout(1600)],
+  ['68-guide-merge', '/tool/merge?guides=1', async (p) => p.waitForTimeout(1400)],
+  ['69-guide-id-card', '/scan/camera?scanMode=id-card&guides=1', async (p) => p.waitForTimeout(1500)],
+  ['70-guides-list', '/guides'],
   ['25-crop-editor', '/scan/crop?id=p3', dragCornersOntoPaper],
   ['26-crop-editor-dark', '/scan/crop?id=p3&theme=dark', dragCornersOntoPaper],
 ];

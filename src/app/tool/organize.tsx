@@ -135,7 +135,7 @@ export default function OrganizeScreen() {
       { text: 'Replace', style: 'destructive', onPress: () => void save('replace') },
     ]);
 
-  const header = <Stack.Screen options={{ title: doc ? 'Organise pages' : 'Organise pages', headerRight: undefined }} />;
+  const header = <Stack.Screen options={{ title: doc ? 'Organise pages' : 'Organise pages' }} />;
 
   if (loading) return <LoadingState />;
   if (!doc) {

@@ -150,6 +150,7 @@ export default function SettingsScreen() {
         <ListGroup title="About">
           <ListRow icon="information-circle-outline" title="Version" value={version} />
           <ListRow icon="scale" title="Licence" value="MIT License" onPress={() => router.push('/licenses')} />
+          <ListRow icon="help-circle-outline" title="Tool guides" subtitle="How every tool works, with animated demos" onPress={() => router.push('/guides')} />
           <ListRow icon="play-circle-outline" title="Show introduction again" onPress={() => void update('onboardingComplete', false)} />
         </ListGroup>
 
