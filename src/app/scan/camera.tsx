@@ -21,7 +21,7 @@ import { useGuideStore } from '@/stores/guideStore';
 import { useScanSession } from '@/stores/scanSessionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { errorMessage } from '@/utils/errors';
-import { appAlert } from '@/stores/dialogStore';
+import { appAlert, toast } from '@/stores/dialogStore';
 
 /**
  * ScanPilot's own document camera (replaces the system scanner UI):
@@ -36,7 +36,7 @@ type Mode = 'new' | 'append' | 'replace' | 'return';
 
 const DEMO = process.env.EXPO_PUBLIC_SCANPILOT_DEMO === '1';
 /** How long the live camera may take to start before falling back to expo-camera. */
-const LIVE_START_TIMEOUT_MS = 8000;
+const LIVE_START_TIMEOUT_MS = 15000;
 const LiveCamera = NativeDocumentCamera;
 const MODE_ICON: Record<ScanMode, IconName> = { document: 'scan', whiteboard: 'whiteboard', book: 'book', 'id-card': 'id-card', 'business-card': 'contact' };
 const INK = '#0B0D12';
@@ -268,7 +268,14 @@ export default function CameraScreen() {
         }
       }
     } catch (error) {
-      appAlert('Could not take the photo', errorMessage(error));
+      if (liveCamera) {
+        // The live camera could not deliver a photo on this device: switch to the standard camera.
+        setReady(false);
+        setLiveFailed(true);
+        toast('Switched to the standard camera. Please take the photo again.');
+      } else {
+        appAlert('Could not take the photo', errorMessage(error));
+      }
     } finally {
       setShooting(false);
     }

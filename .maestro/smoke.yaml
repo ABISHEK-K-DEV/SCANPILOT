@@ -46,10 +46,32 @@ appId: app.scanpilot
     timeout: 20000
 - tapOn: "Manual capture"
 - takeScreenshot: e2e-results/04-camera
+# Wait until the camera is streaming (the shutter is enabled), then shoot.
+- extendedWaitUntil:
+    visible:
+      text: "Take photo"
+      enabled: true
+    timeout: 30000
 - tapOn: "Take photo"
 - extendedWaitUntil:
     visible: "Done, .*"
-    timeout: 60000
+    timeout: 30000
+    optional: true
+# If the live camera cannot shoot on this device, the app switches to the
+# standard camera and asks for another photo.
+- runFlow:
+    when:
+      notVisible: "Done, .*"
+    commands:
+      - extendedWaitUntil:
+          visible:
+            text: "Take photo"
+            enabled: true
+          timeout: 30000
+      - tapOn: "Take photo"
+      - extendedWaitUntil:
+          visible: "Done, .*"
+          timeout: 60000
 - tapOn: "Done, .*"
 - extendedWaitUntil:
     visible: "Review scan"

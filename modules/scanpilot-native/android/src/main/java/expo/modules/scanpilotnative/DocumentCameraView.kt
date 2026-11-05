@@ -27,6 +27,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.Observer
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.viewevent.EventDispatcher
@@ -64,6 +65,8 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
   private var provider: ProcessCameraProvider? = null
   private var imageCapture: ImageCapture? = null
   private var bound = false
+  private var bindGeneration = 0
+  private val mainHandler = Handler(Looper.getMainLooper())
   private var released = false
 
   @Volatile var analysisEnabled: Boolean = true
@@ -127,48 +130,8 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
     future.addListener({
       try {
         if (released || !isAttachedToWindow) return@addListener
-        val cameraProvider = future.get()
-        provider = cameraProvider
-        // Full set first; devices (and emulators) that cannot run all three
-        // streams at these sizes get lighter configurations.
-        val attempts = listOf(
-          Triple(fourThree(Size(4032, 3024)), fourThree(Size(640, 480)), true),
-          Triple(fourThree(Size(1920, 1440)), fourThree(Size(320, 240)), true),
-          Triple(fourThree(Size(1920, 1440)), null, false),
-        )
-        var lastError: Exception? = null
-        for ((captureRes, analysisRes, withAnalysis) in attempts) {
-          try {
-            val preview = Preview.Builder().setResolutionSelector(fourThree(null)).build().also {
-              it.surfaceProvider = previewView.surfaceProvider
-            }
-            val capture = ImageCapture.Builder()
-              .setResolutionSelector(captureRes)
-              .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
-              .setFlashMode(flashMode)
-              .build()
-            cameraProvider.unbindAll()
-            if (withAnalysis && analysisRes != null) {
-              val analysis = ImageAnalysis.Builder()
-                .setResolutionSelector(analysisRes)
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
-              analysis.setAnalyzer(analysisExecutor) { image -> analyse(image) }
-              cameraProvider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis)
-            } else {
-              cameraProvider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture)
-            }
-            imageCapture = capture
-            lastError = null
-            break
-          } catch (e: Exception) {
-            Log.w(TAG, "Camera configuration failed, trying a lighter one", e)
-            lastError = e
-          }
-        }
-        lastError?.let { throw it }
-        bound = true
-        onCameraReady(mapOf("ready" to true))
+        provider = future.get()
+        bindAttempt(owner, 0)
       } catch (e: Exception) {
         Log.e(TAG, "Camera could not start", e)
         onCameraError(mapOf("message" to (e.message ?: "The camera could not start.")))
@@ -176,7 +139,72 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
     }, ContextCompat.getMainExecutor(context))
   }
 
+  /**
+   * Binds one stream configuration and waits for the preview to actually
+   * stream. Devices (and emulators) that accept a configuration but never
+   * deliver frames move on to a lighter one; if none streams, JS falls back
+   * to expo-camera.
+   */
+  private fun bindAttempt(owner: LifecycleOwner, index: Int) {
+    val cameraProvider = provider ?: return
+    if (released || !isAttachedToWindow) return
+    if (index >= ATTEMPTS.size) {
+      unbind()
+      onCameraError(mapOf("message" to "The camera did not start."))
+      return
+    }
+    val (captureSize, analysisSize) = ATTEMPTS[index]
+    try {
+      val preview = Preview.Builder().setResolutionSelector(fourThree(if (index == 0) null else Size(1280, 960))).build().also {
+        it.surfaceProvider = previewView.surfaceProvider
+      }
+      val capture = ImageCapture.Builder()
+        .setResolutionSelector(fourThree(captureSize))
+        .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+        .setFlashMode(flashMode)
+        .build()
+      cameraProvider.unbindAll()
+      if (analysisSize != null) {
+        val analysis = ImageAnalysis.Builder()
+          .setResolutionSelector(fourThree(analysisSize))
+          .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+          .build()
+        analysis.setAnalyzer(analysisExecutor) { image -> analyse(image) }
+        cameraProvider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture, analysis)
+      } else {
+        cameraProvider.bindToLifecycle(owner, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture)
+      }
+      imageCapture = capture
+      bound = true
+    } catch (e: Exception) {
+      Log.w(TAG, "Camera configuration ${index + 1} failed", e)
+      bindAttempt(owner, index + 1)
+      return
+    }
+    val attempt = ++bindGeneration
+    var settled = false
+    val streamState = previewView.previewStreamState
+    val observer = object : Observer<PreviewView.StreamState> {
+      override fun onChanged(value: PreviewView.StreamState) {
+        if (settled || attempt != bindGeneration || value != PreviewView.StreamState.STREAMING) return
+        settled = true
+        streamState.removeObserver(this)
+        onCameraReady(mapOf("ready" to true))
+      }
+    }
+    streamState.observe(owner, observer)
+    mainHandler.postDelayed({
+      if (settled || attempt != bindGeneration) return@postDelayed
+      settled = true
+      streamState.removeObserver(observer)
+      Log.w(TAG, "Camera configuration ${index + 1} did not stream; trying a lighter one")
+      imageCapture = null
+      bindAttempt(owner, index + 1)
+    }, STREAM_TIMEOUT_MS)
+  }
+
   private fun unbind() {
+    bindGeneration++
     try {
       provider?.unbindAll()
     } catch (_: Exception) {
@@ -255,7 +283,7 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
       return
     }
     val settled = AtomicBoolean(false)
-    val main = Handler(Looper.getMainLooper())
+    val main = mainHandler
     val fallback = Runnable {
       if (!settled.compareAndSet(false, true)) return@Runnable
       Log.w(TAG, "Capture timed out; saving the preview frame")
@@ -332,5 +360,13 @@ class DocumentCameraView(context: Context, appContext: AppContext) : ExpoView(co
     private const val MAX_PHOTO_EDGE = 3200
     private const val CAPTURE_TIMEOUT_MS = 6000L
     private const val TAG = "ScanPilotCamera"
+    private const val STREAM_TIMEOUT_MS = 3500L
+
+    /** Capture size, analysis size (null = no live analysis), lightest last. */
+    private val ATTEMPTS: List<Pair<Size, Size?>> = listOf(
+      Size(4032, 3024) to Size(640, 480),
+      Size(1920, 1440) to Size(320, 240),
+      Size(1280, 960) to null,
+    )
   }
 }
