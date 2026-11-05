@@ -1,8 +1,11 @@
+import { ActivityAction, startActivityAsync } from 'expo-intent-launcher';
 import { router } from 'expo-router';
 import { useState } from 'react';
+import { Linking, Platform } from 'react-native';
 
 
 import { ProgressOverlay } from '@/components/ui';
+import { loadValue, saveValue } from '@/db/settingsRepository';
 import { ScannerError } from '@/native/scanner';
 import { filterImage } from '@/services/scan/pageProcessing';
 import { capturePages, type IngestCallbacks, pickPages } from '@/services/scan/scanService';
@@ -95,6 +98,38 @@ export function useScanFlow() {
     return out;
   }
 
+  /** Opens Android's app settings for Google Play services, whose camera permission powers Google's scanner. */
+  const openPlayServicesSettings = () => {
+    if (Platform.OS !== 'android') return void Linking.openSettings();
+    void startActivityAsync(ActivityAction.APPLICATION_DETAILS_SETTINGS, { data: 'package:com.google.android.gms' }).catch(() =>
+      appAlert('Open settings manually', 'Settings → Apps → Google Play services → Permissions → Camera → Allow.'),
+    );
+  };
+
+  /**
+   * Google's scanner came back without pages. Usually a deliberate cancel, but on
+   * some phones (Xiaomi, Realme, Vivo, Oppo…) its preview stays black because
+   * Google Play services has no camera permission — offer both ways out.
+   */
+  async function offerSystemScannerHelp(mode: AddMode, navigate: boolean, scanMode?: ScanMode): Promise<void> {
+    if (Platform.OS !== 'android' || (await loadValue<boolean>('hideScannerHint'))) return;
+    appAlert(
+      'Camera black or not working?',
+      'Google’s scanner uses the camera permission of “Google Play services”. Allow it there, or scan with ScanPilot’s own camera.',
+      [
+        {
+          text: 'Use ScanPilot camera',
+          onPress: () => {
+            void useSettingsStore.getState().update('scanner', 'camera');
+            void capture(mode, navigate, scanMode);
+          },
+        },
+        { text: 'Fix camera permission', onPress: openPlayServicesSettings },
+        { text: 'It was fine', style: 'cancel', onPress: () => void saveValue('hideScannerHint', true) },
+      ],
+    );
+  }
+
   async function capture(mode: AddMode = 'append', navigate = false, scanMode?: ScanMode): Promise<void> {
     // ScanPilot's own camera screen (default). It adds pages to the session itself.
     if (useSettingsStore.getState().settings.scanner === 'camera') {
@@ -107,6 +142,7 @@ export function useScanFlow() {
       const pages = await capturePages({ maxPages: typeof mode === 'object' ? 1 : undefined, ...callbacks('Preparing pages') });
       if (!pages) {
         setProgress(null);
+        void offerSystemScannerHelp(mode, navigate, scanMode);
         return;
       }
       apply(await autoEnhance(pages), mode);
