@@ -71,7 +71,7 @@
         "expo-image-picker",
         {
           "photosPermission": "ScanPilot needs access to the photos you choose so it can turn them into PDFs on your device.",
-          "cameraPermission": false,
+          "cameraPermission": "ScanPilot uses the camera only while you scan a document. Photos are processed on this device and never uploaded.",
           "microphonePermission": false
         }
       ],

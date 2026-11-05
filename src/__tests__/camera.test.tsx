@@ -29,7 +29,7 @@ jest.mock('@/native/camera', () => {
     React.useEffect(() => onCameraReady?.(), [onCameraReady]);
     return <View testID="camera" />;
   });
-  return { CameraView, useCameraPermissions: jest.fn(() => [{ granted: true, canAskAgain: true }, jest.fn()]) };
+  return { CameraView, useCameraPermissions: jest.fn(() => [{ granted: true, canAskAgain: true }, jest.fn(), jest.fn()]) };
 });
 
 jest.mock('@/services/scan/pageProcessing', () => ({
@@ -53,7 +53,7 @@ beforeEach(() => {
 
 describe('ScanPilot camera', () => {
   it('asks for camera access before showing the camera', async () => {
-    (useCameraPermissions as jest.Mock).mockReturnValueOnce([{ granted: false, canAskAgain: true }, jest.fn()]);
+    (useCameraPermissions as jest.Mock).mockReturnValueOnce([{ granted: false, canAskAgain: true }, jest.fn(), jest.fn()]);
     await render(<CameraScreen />, { wrapper });
     expect(screen.getByText('Allow the camera')).toBeTruthy();
     expect(screen.getByLabelText('Allow camera')).toBeTruthy();

@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams, usePreventRemove } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Linking, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, AppState, Linking, Pressable, ScrollView, type ScrollViewInstance, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText, Button, Icon, type IconName } from '@/components/ui';
@@ -84,7 +84,14 @@ export default function CameraScreen() {
     if (m && barWidth) modeBar.current?.scrollTo({ x: Math.max(0, m.x + m.width / 2 - barWidth / 2), animated: true });
   }, [captureMode, barWidth]);
   const insets = useSafeAreaInsets();
-  const [permission, requestPermission] = useCameraPermissions();
+  const [permission, requestPermission, getPermission] = useCameraPermissions();
+  // Coming back from system Settings: re-read the permission so the camera opens straight away.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void getPermission();
+    });
+    return () => sub.remove();
+  }, [getPermission]);
   const camera = useRef<CameraView>(null);
   const [ready, setReady] = useState(DEMO);
   const [flash, setFlash] = useState<FlashMode>('off');

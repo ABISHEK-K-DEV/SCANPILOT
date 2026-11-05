@@ -109,6 +109,9 @@ Professional visual overhaul across every screen, driven from shared tokens and 
 - **Licence**: ScanPilot is MIT-licensed (`LICENSE`, `package.json`). Settings → Licence shows the MIT summary (permissions / conditions / limitations) and full text; third-party acknowledgements are collapsed beneath it (their notices must still be shipped).
 - **App icon / splash / favicon** regenerated from the same vector mark: `node scripts/brand/render-icons.mjs`.
 
+### Camera permission fix (found on a real device)
+The camera screen showed "Allow the camera", but Android's app info listed *No permissions requested*: `expo-image-picker` was configured with `cameraPermission: false`, which **blocks** `android.permission.CAMERA` in the merged manifest. It now carries a usage string instead; the generated manifest was checked with `expo config --type introspect`, and `appConfig.test.ts` prevents a regression.
+
 ## Scan modes, in-app dialogs, Office export, OCR fixes ✅
 - **Scan modes** in the camera (`services/scan/modes.ts`): **Document**, **Whiteboard** (new `whiteboard` filter: glare/shadow removal, white board, vivid markers), **Book** (two-page spread split into left/right pages), **ID card** (front → back, saved on one A4 page at true ID-1 size via `idCardSheetPdf`), **Business card** (on-device OCR → `parseBusinessCard` → *Save contact* as .vcf, or copy). Shortcuts on Home and in Tools; the frame guide changes shape per mode.
 - **Dialogs**: every native `Alert` replaced by an in-app dialog (`stores/dialogStore.ts` + `DialogHost`): tone icon, Cancel/confirm buttons with destructive styling, spring-in animation, queueing. Quick confirmations (copied, saved, cleared) are toasts.
