@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { router as mockRouter } from 'expo-router';
 import type { ReactNode } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import HomeScreen from '@/app/(tabs)/index';
@@ -26,6 +26,14 @@ jest.mock('@expo/vector-icons/Ionicons', () => {
   const MockIcon = ({ name }: { name: string }) => <Text>{`icon:${name}`}</Text>;
   return { __esModule: true, default: MockIcon };
 });
+
+jest.mock('@/db/settingsRepository', () => ({
+  loadValue: jest.fn(async () => null),
+  saveValue: jest.fn(async () => undefined),
+  loadSettings: jest.fn(),
+  saveSetting: jest.fn(async () => undefined),
+}));
+jest.mock('expo-intent-launcher', () => ({ ActivityAction: { APPLICATION_DETAILS_SETTINGS: 'details' }, startActivityAsync: jest.fn(async () => ({})) }));
 
 jest.mock('@/db/documentsRepository', () => ({ listDocuments: jest.fn(async () => []) }));
 jest.mock('@/db/foldersRepository', () => ({ listFolders: jest.fn(async () => []) }));
@@ -73,11 +81,31 @@ describe('scan entry points', () => {
     expect(useScanSession.getState().pages.map((p) => p.id)).toEqual(['p1', 'p2']);
   });
 
-  it('does not navigate when the user cancels the scanner', async () => {
+  it('does not navigate on cancel, and offers the camera fixes (black-preview phones)', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
+    const platform = jest.replaceProperty(Platform, 'OS', 'android'); // the hint is Android-only
     await render(<HomeScreen />, { wrapper });
     await fireEvent.press(screen.getAllByLabelText('Scan document')[0]);
     await waitFor(() => expect(capturePages).toHaveBeenCalled());
     expect(mockRouter.push).not.toHaveBeenCalled();
+    await waitFor(() => expect(alert).toHaveBeenCalledWith('Camera was black or not working?', expect.any(String), expect.any(Array)));
+    const buttons = alert.mock.calls[0][2] as { text: string; onPress?: () => void }[];
+    expect(buttons.map((b) => b.text)).toEqual(['Use ScanPilot camera', 'Fix camera permission', 'It was fine']);
+    buttons[0].onPress?.();
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/scan/camera', params: { mode: 'new' } });
+    alert.mockRestore();
+    platform.restore();
+  });
+
+  it('opens ScanPilot camera directly when chosen in Settings', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { useSettingsStore } = require('@/stores/settingsStore');
+    useSettingsStore.setState({ settings: { ...useSettingsStore.getState().settings, scanner: 'camera' } });
+    await render(<HomeScreen />, { wrapper });
+    await fireEvent.press(screen.getAllByLabelText('Scan document')[0]);
+    expect(capturePages).not.toHaveBeenCalled();
+    expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/scan/camera', params: { mode: 'new' } });
+    useSettingsStore.setState({ settings: { ...useSettingsStore.getState().settings, scanner: 'google' } });
   });
 });
 

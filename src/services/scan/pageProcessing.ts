@@ -12,6 +12,7 @@ import { UserFacingError } from '@/utils/errors';
 import { createId } from '@/utils/id';
 
 import { encodeBmp24 } from './bmp';
+import { detectDocumentQuad } from './detect';
 import { type Adjustments, adjust, applyFilter, type FilterId, toRgb } from './filters';
 import { boundingRect, isAxisAlignedRect, isConvexQuad, outputSizeForQuad, type Quad } from './geometry';
 import type { ScanPage } from './types';
@@ -160,5 +161,28 @@ export async function filterImage(sourceUri: string, filter: FilterId, adjustmen
     return await render(bmp.uri, () => undefined);
   } finally {
     deleteFileQuietly(bmp.uri);
+  }
+}
+
+/** Long edge of the preview used for page detection (fast, ~50 ms). */
+const DETECT_EDGE = 360;
+
+/**
+ * Finds the page in a photo. Returns the quad in full-image pixels, or null
+ * if no page stands out clearly from the background.
+ */
+export async function detectPageQuad(page: ScanPage): Promise<Quad | null> {
+  const ctx = ImageManipulator.manipulate(page.uri);
+  ctx.resize(page.width >= page.height ? { width: DETECT_EDGE } : { height: DETECT_EDGE });
+  const small = await (await ctx.renderAsync()).saveAsync({ format: SaveFormat.JPEG, compress: 0.85 });
+  try {
+    const decoded = decodeJpeg(await new File(small.uri).bytes(), { useTArray: true, formatAsRGBA: true });
+    const quad = detectDocumentQuad(decoded);
+    if (!quad) return null;
+    const sx = page.width / decoded.width;
+    const sy = page.height / decoded.height;
+    return quad.map((p) => ({ x: Math.min(page.width, p.x * sx), y: Math.min(page.height, p.y * sy) })) as Quad;
+  } finally {
+    deleteFileQuietly(small.uri);
   }
 }

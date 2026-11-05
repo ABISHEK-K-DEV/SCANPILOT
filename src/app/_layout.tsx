@@ -107,6 +107,7 @@ export default function RootLayout() {
           <Stack.Screen name="tool/ocr" options={{ title: 'Extract text' }} />
           <Stack.Screen name="tool/pdf-to-images" options={{ title: 'PDF to JPG' }} />
           <Stack.Screen name="tool/text-to-pdf" options={{ title: 'Text to PDF' }} />
+          <Stack.Screen name="scan/camera" options={{ headerShown: false, animation: 'fade' }} />
           <Stack.Screen name="scan/review" options={{ title: 'Review scan', gestureEnabled: false }} />
           <Stack.Screen
             name="scan/crop"

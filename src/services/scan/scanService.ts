@@ -11,7 +11,7 @@ import { readBytes } from '@/services/storage/fileStore';
 import type { ScanDocument } from '@/types/document';
 import { CancelledError } from '@/utils/errors';
 
-import { ingestImage } from './pageProcessing';
+import { cropImage, detectPageQuad, ingestImage } from './pageProcessing';
 import { type DocumentPreset, pageSizeForPreset, type ScanPage } from './types';
 
 export interface IngestCallbacks {
@@ -82,4 +82,21 @@ export async function savePagesAsPdf(
   });
   options.onProgress?.(total, total);
   return doc;
+}
+
+/**
+ * Photo from ScanPilot's own camera → session page. The page is found and
+ * straightened automatically when it stands out from the background; the
+ * untouched photo stays available via "Original" in the crop editor.
+ */
+export async function processCameraPhoto(uri: string): Promise<ScanPage> {
+  const page = await ingestImage(uri, { deleteSource: true });
+  try {
+    const quad = await detectPageQuad(page);
+    if (!quad) return page;
+    const straightened = await cropImage(page, quad);
+    return { ...page, uri: straightened.uri, width: straightened.width, height: straightened.height };
+  } catch {
+    return page; // detection is best-effort; the user can still crop by hand
+  }
 }

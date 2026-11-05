@@ -9,6 +9,8 @@ export interface AppSettings {
   sort: SortOption;
   /** Require fingerprint/face/PIN when opening the app. */
   appLock: boolean;
+  /** 'google' = ML Kit scanner (Play services), 'camera' = ScanPilot's own camera. */
+  scanner: 'google' | 'camera';
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -17,4 +19,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   viewMode: 'grid',
   sort: { field: 'date', direction: 'desc' },
   appLock: false,
+  scanner: 'google',
 };

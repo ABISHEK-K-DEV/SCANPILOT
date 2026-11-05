@@ -100,6 +100,14 @@ Not offline-feasible and therefore not offered: Word/Excel/PowerPoint → PDF an
 ## Milestone 3 — Filters & enhancement ✅
 Scan review → Filter: Original, Auto enhance, Document (shadow & colour-cast removal), Grayscale, Black & white (adaptive threshold), High contrast, Photo; apply to one or all pages; switching filters never stacks (each page keeps its pre-filter image).
 
+## Field fix — black camera in Google's scanner
+Reported on a real phone: the scanner UI opened but the preview stayed black and flash did nothing. Google's scanner runs inside Google Play services and relies on *its* camera permission, which some OEM builds leave off.
+- New **ScanPilot camera** (`app/scan/camera.tsx`, expo-camera): preview, flash cycle, torch, framing guide, multi-page, retake.
+- Automatic page detection for its photos (`services/scan/detect.ts`: Otsu threshold → largest bright region → corners; ~45 ms on a 360 px preview), then perspective straightening; "Original" in the crop editor restores the raw photo.
+- When Google's scanner returns no pages: prompt with **Use ScanPilot camera** / **Fix camera permission** (opens Google Play services' app settings) / **It was fine** (don't ask again).
+- Settings → Scanning → Scanner: Google scanner or ScanPilot camera.
+- Device checklist: [ ] camera permission prompt; [ ] preview + flash + torch; [ ] 3-page capture → review; [ ] auto-straighten on a page on a dark desk; [ ] retake from review.
+
 ## Next
 - iOS parity for native-only tools (PDFKit renderer + Vision OCR).
 - Drag-and-drop page reordering; Hindi/Unicode text in watermark & annotations (bundle a Noto font via fontkit).

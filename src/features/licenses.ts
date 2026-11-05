@@ -13,7 +13,7 @@ export interface LicenseEntry {
 export const LICENSES: readonly LicenseEntry[] = [
   { name: 'React Native', license: 'MIT', url: 'https://github.com/facebook/react-native', usage: 'App framework' },
   { name: 'React', license: 'MIT', url: 'https://github.com/facebook/react', usage: 'UI library' },
-  { name: 'Expo SDK & Expo Router', license: 'MIT', url: 'https://github.com/expo/expo', usage: 'Native modules, navigation, build tooling' },
+  { name: 'Expo SDK & Expo Router (incl. expo-camera)', license: 'MIT', url: 'https://github.com/expo/expo', usage: 'Native modules, camera, navigation, build tooling' },
   { name: '@cantoo/pdf-lib (fork of pdf-lib)', license: 'MIT', url: 'https://github.com/cantoo-scribe/pdf-lib', usage: 'Creating, editing and encrypting PDFs' },
   { name: 'Google ML Kit Text Recognition v2', license: 'ML Kit Terms (free, on-device)', url: 'https://developers.google.com/ml-kit/vision/text-recognition/v2', usage: 'Offline OCR (Latin, Devanagari)' },
   { name: 'react-native-svg', license: 'MIT', url: 'https://github.com/software-mansion/react-native-svg', usage: 'Signatures and annotation drawing' },

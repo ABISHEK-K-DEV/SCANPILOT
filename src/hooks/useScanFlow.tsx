@@ -1,6 +1,10 @@
+import { ActivityAction, startActivityAsync } from 'expo-intent-launcher';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, Linking, Platform } from 'react-native';
+
+import { loadValue, saveValue } from '@/db/settingsRepository';
+import { useSettingsStore } from '@/stores/settingsStore';
 
 import { ProgressOverlay } from '@/components/ui';
 import { ScannerError } from '@/native/scanner';
@@ -53,6 +57,7 @@ export function useScanFlow() {
     Alert.alert('Scanner unavailable', message, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Choose photos', onPress: () => void addFromPhotos(mode, navigate) },
+      { text: 'Use ScanPilot camera', onPress: () => openCamera(mode, navigate) },
     ]);
   };
 
@@ -69,11 +74,54 @@ export function useScanFlow() {
     }
   }
 
+  const openCamera = (mode: AddMode, navigate: boolean) => {
+    const params =
+      typeof mode === 'object' ? { mode: 'retake', page: mode.replace } : navigate ? { mode: 'new' } : { mode: 'add' };
+    router.push({ pathname: '/scan/camera', params });
+  };
+
+  /** Opens Android's settings page for Google Play services (its camera permission powers Google's scanner). */
+  const openPlayServicesSettings = () => {
+    if (Platform.OS !== 'android') return void Linking.openSettings();
+    void startActivityAsync(ActivityAction.APPLICATION_DETAILS_SETTINGS, { data: 'package:com.google.android.gms' }).catch(() =>
+      Alert.alert('Open settings manually', 'Settings → Apps → Google Play services → Permissions → Camera → Allow.'),
+    );
+  };
+
+  /**
+   * Google's scanner closed without pages. That is usually a deliberate cancel,
+   * but on some phones (Xiaomi, Realme, Vivo, Oppo…) its preview stays black
+   * because Google Play services has no camera permission — offer both fixes.
+   */
+  const offerFallback = async (mode: AddMode, navigate: boolean) => {
+    if (Platform.OS !== 'android' || (await loadValue<boolean>('hideScannerHint'))) return;
+    Alert.alert(
+      'Camera was black or not working?',
+      'Google’s scanner needs camera access for “Google Play services”. You can allow it, or scan with ScanPilot’s own camera instead.',
+      [
+        { text: 'Use ScanPilot camera', onPress: () => openCamera(mode, navigate) },
+        { text: 'Fix camera permission', onPress: openPlayServicesSettings },
+        {
+          text: 'It was fine',
+          style: 'cancel',
+          onPress: () => void saveValue('hideScannerHint', true),
+        },
+      ],
+    );
+  };
+
   async function capture(mode: AddMode = 'append', navigate = false): Promise<void> {
+    if (useSettingsStore.getState().settings.scanner === 'camera') {
+      openCamera(mode, navigate);
+      return;
+    }
     try {
       const pages = await capturePages({ maxPages: typeof mode === 'object' ? 1 : undefined, ...callbacks('Preparing pages') });
       setProgress(null);
-      if (!pages) return;
+      if (!pages) {
+        void offerFallback(mode, navigate);
+        return;
+      }
       apply(pages, mode);
       if (navigate) router.push('/scan/review');
     } catch (error) {
@@ -103,5 +151,5 @@ export function useScanFlow() {
     />
   );
 
-  return { startScan, startFromPhotos, capture, addFromPhotos, overlay };
+  return { startScan, startFromPhotos, capture, addFromPhotos, openPlayServicesSettings, overlay };
 }

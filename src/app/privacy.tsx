@@ -22,7 +22,7 @@ const POINTS: { icon: IconName; title: string; body: string }[] = [
   {
     icon: 'hand-left-outline',
     title: 'Minimal permissions',
-    body: 'Imports use the system file and photo pickers, so ScanPilot only sees the files you select. It never asks for access to all your storage.',
+    body: 'Imports use the system file and photo pickers, so ScanPilot only sees the files you select. The camera is used only while you scan. ScanPilot never asks for access to all your storage, your microphone or your location.',
   },
   {
     icon: 'archive-outline',

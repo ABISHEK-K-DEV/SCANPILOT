@@ -17,7 +17,7 @@ Gradle/CocoaPods are listed manually below.
 | fflate 0.8 | MIT | .docx and .zip export | Yes |
 | culori, node-html-better-parser | MIT | Dependencies of @cantoo/pdf-lib | Yes |
 | react-native-svg 15 | MIT | Signature pad and annotation drawing | Yes |
-| expo-print, expo-clipboard, expo-local-authentication, expo-linear-gradient, expo-haptics | MIT | Text→PDF/print, copy text, app lock, UI | Yes |
+| expo-camera, expo-intent-launcher, expo-print, expo-clipboard, expo-local-authentication, expo-linear-gradient, expo-haptics | MIT | Text→PDF/print, copy text, app lock, UI | Yes |
 | Google ML Kit Text Recognition v2 (`com.google.mlkit:text-recognition`, `-devanagari` 16.0.1) | ML Kit Terms (free, closed source, bundled on-device models) | Offline OCR | Yes (Android) |
 | react-native-pdf 7.x | MIT | PDF viewer component | Yes |
 | AndroidPdfViewer (zacharee fork) | Apache-2.0 | Android viewer widget used by react-native-pdf | Yes (Android) |

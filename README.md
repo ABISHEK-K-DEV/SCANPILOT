@@ -25,7 +25,8 @@ Documents never leave the device unless the user explicitly shares or exports th
 * Merge, Split (ranges / extract / every page), Compress (Android; low/medium/high with size estimates), Organise pages (rotate, reorder, duplicate, delete, extract) — from Home, Tools or any document's ⋮ menu. Results can be opened or shared immediately; originals are kept unless you choose "Replace the original".
 
 **Scanner (Milestone 2)**
-* Camera scanning with Google ML Kit Document Scanner (Android) / VisionKit (iOS): live edge detection, auto-capture, flash, perspective correction, multi-page, retakes — without the Android CAMERA permission.
+* Camera scanning with Google ML Kit Document Scanner (Android) / VisionKit (iOS): live edge detection, auto-capture, flash, perspective correction, multi-page, retakes.
+* ScanPilot's own camera (expo-camera) as an alternative: live preview, flash (off/auto/on), torch, framing guide, multi-page; each photo's page is detected and straightened automatically on the phone.
 * Review screen: page thumbnails, rotate, crop/adjust corners (manual perspective correction), retake, delete, reorder, add pages from camera or photos, rename.
 * Document types: Original, A4, Letter, Receipt, Business card, ID card, Book/notes.
 
@@ -212,7 +213,7 @@ docs/                  Technology decisions, architecture
 * Files live in the app's private storage; metadata in a local SQLite database.
 * No account, no backend, no analytics or ad SDKs.
 * Imports use system pickers — no broad storage permission. Android `allowBackup` is disabled.
-* Permissions blocked in the manifest: camera (ML Kit's scanner runs in Google Play services, so ScanPilot itself never needs it), microphone, legacy storage, overlay.
+* Camera permission is requested only when you use ScanPilot's own camera (Google's scanner uses Google Play services' camera permission). Blocked in the manifest: microphone, legacy storage, overlay.
 
 ## Troubleshooting
 
@@ -220,6 +221,7 @@ docs/                  Technology decisions, architecture
 * **Gradle: “SDK location not found”** — set `ANDROID_HOME` or create `android/local.properties` with `sdk.dir=…`.
 * **Gradle: unsupported Java version** — use JDK 17 (`java -version`); in Android Studio set Gradle JDK to 17.
 * **Device not listed by `adb devices`** — enable USB debugging, accept the RSA prompt, try another cable.
+* **Scanner opens but the camera is black / flash does nothing** — Google's scanner runs inside Google Play services and uses *its* camera permission, which some phones (Xiaomi, Realme, Vivo, Oppo…) leave off. Allow it in Settings → Apps → Google Play services → Permissions → Camera, or switch Settings → Scanning → Scanner to **ScanPilot camera**. ScanPilot offers both fixes when the scanner closes without pages.
 * **“The camera scanner needs Google Play services”** — the device has no Play services (e.g. Huawei); use “Choose photos” and the crop editor.
 * **Metro not reachable from the phone** — same Wi-Fi network, or `adb reverse tcp:8081 tcp:8081`.
 

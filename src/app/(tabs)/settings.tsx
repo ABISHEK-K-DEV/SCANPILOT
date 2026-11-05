@@ -15,6 +15,7 @@ import type { ThemePreference } from '@/types/settings';
 import { formatBytes } from '@/utils/format';
 
 const THEME_LABEL: Record<ThemePreference, string> = { system: 'Match device', light: 'Light', dark: 'Dark' };
+const SCANNER_LABEL = { google: 'Google scanner', camera: 'ScanPilot camera' } as const;
 
 export default function SettingsScreen() {
   const { spacing, colors } = useAppTheme();
@@ -23,6 +24,7 @@ export default function SettingsScreen() {
   const update = useSettingsStore((s) => s.update);
   const stats = useLibraryStats();
   const [themeSheet, setThemeSheet] = useState(false);
+  const [scannerSheet, setScannerSheet] = useState(false);
   const [usage, setUsage] = useState<StorageUsage | null>(null);
 
   useFocusEffect(
@@ -78,6 +80,10 @@ export default function SettingsScreen() {
           />
         </ListGroup>
 
+        <ListGroup title="Scanning">
+          <ListRow icon="scan-outline" title="Scanner" value={SCANNER_LABEL[settings.scanner]} onPress={() => setScannerSheet(true)} />
+        </ListGroup>
+
         <ListGroup title="Privacy & security">
           <ListRow icon="shield-checkmark-outline" title="How ScanPilot protects your files" onPress={() => router.push('/privacy')} />
           <ListRow
@@ -117,6 +123,30 @@ export default function SettingsScreen() {
         </AppText>
       </View>
 
+      <ActionSheet
+        visible={scannerSheet}
+        title="Scanner"
+        subtitle="Which camera opens when you tap Scan"
+        onClose={() => setScannerSheet(false)}
+        actions={[
+          {
+            key: 'google',
+            label: 'Google scanner',
+            icon: 'logo-google',
+            hint: 'Automatic edges & capture. Needs camera access for Google Play services',
+            selected: settings.scanner === 'google',
+            onPress: () => void update('scanner', 'google'),
+          },
+          {
+            key: 'camera',
+            label: 'ScanPilot camera',
+            icon: 'camera-outline',
+            hint: 'Built-in camera with flash; pages are found and straightened automatically',
+            selected: settings.scanner === 'camera',
+            onPress: () => void update('scanner', 'camera'),
+          },
+        ]}
+      />
       <ActionSheet
         visible={themeSheet}
         title="Theme"
