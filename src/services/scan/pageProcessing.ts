@@ -7,6 +7,7 @@ import { Directory, File } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { decode as decodeJpeg } from 'jpeg-js';
 
+import { getNativePageProcessor } from '@/native/pageProcessor';
 import { tempDir } from '@/services/storage/paths';
 import { UserFacingError } from '@/utils/errors';
 import { createId } from '@/utils/id';
@@ -106,6 +107,13 @@ export async function rotateImage(page: ScanPage, degrees: 90 | -90 | 180): Prom
   });
 }
 
+/** New JPEG path in the session directory (for native outputs). */
+function sessionJpeg(): string {
+  return new File(sessionDir(), `${createId()}.jpg`).uri;
+}
+
+const quadNumbers = (q: Quad): number[] => q.flatMap((p) => [p.x, p.y]);
+
 /** Lets the UI paint a progress overlay before a synchronous, CPU-heavy step. */
 const nextFrame = () => new Promise<void>((resolve) => setTimeout(resolve, 32));
 
@@ -130,6 +138,12 @@ export async function cropImage(page: ScanPage, quad: Quad): Promise<SavedImage>
     });
   }
 
+  const native = getNativePageProcessor();
+  if (native) {
+    const out = await native.process({ input: page.uri, quad: quadNumbers(quad), maxEdge: MAX_PAGE_EDGE, filter: 'original', quality: Math.round(JPEG_QUALITY * 100), baseOutput: sessionJpeg(), filteredOutput: null });
+    return { uri: out.baseUri, width: out.baseWidth, height: out.baseHeight };
+  }
+
   await nextFrame();
   const bytes = await new File(page.uri).bytes();
   const decoded = decodeJpeg(bytes, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 256 });
@@ -150,6 +164,11 @@ export async function cropImage(page: ScanPage, quad: Quad): Promise<SavedImage>
  * writing a new JPEG. The source is untouched so filters can be switched freely.
  */
 export async function filterImage(sourceUri: string, filter: FilterId, adjustments: Adjustments = { brightness: 0, contrast: 0 }): Promise<SavedImage> {
+  const native = getNativePageProcessor();
+  if (native && filter !== 'original' && adjustments.brightness === 0 && adjustments.contrast === 0) {
+    const out = await native.process({ input: sourceUri, quad: null, maxEdge: MAX_PAGE_EDGE, filter, quality: Math.round(JPEG_QUALITY * 100), baseOutput: null, filteredOutput: sessionJpeg() });
+    if (out.uri && out.width && out.height) return { uri: out.uri, width: out.width, height: out.height };
+  }
   await nextFrame();
   const decoded = decodeJpeg(await new File(sourceUri).bytes(), { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 256 });
   await nextFrame();
@@ -237,6 +256,24 @@ export async function processCapturedPage(page: ScanPage, filter: FilterId): Pro
   } catch {
     quad = null;
   }
+  const native = getNativePageProcessor();
+  if (native) {
+    // Whole pipeline in compiled code: seconds instead of 20–30 s of per-pixel JS on Hermes.
+    const useQuad = quad && isConvexQuad(quad) ? quadNumbers(quad) : null;
+    const out = await native.process({
+      input: page.uri,
+      quad: useQuad,
+      maxEdge: MAX_PAGE_EDGE,
+      filter,
+      quality: Math.round(JPEG_QUALITY * 100),
+      baseOutput: useQuad ? sessionJpeg() : null,
+      filteredOutput: filter === 'original' ? null : sessionJpeg(),
+    });
+    const croppedNative: ScanPage = { ...page, uri: out.baseUri, width: out.baseWidth, height: out.baseHeight };
+    if (filter === 'original' || !out.uri || !out.width || !out.height) return croppedNative;
+    return { ...croppedNative, uri: out.uri, width: out.width, height: out.height, base: { uri: out.baseUri, width: out.baseWidth, height: out.baseHeight }, filter };
+  }
+
   await nextFrame();
   const decoded = decodeJpeg(await new File(page.uri).bytes(), { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 256 });
   await nextFrame();

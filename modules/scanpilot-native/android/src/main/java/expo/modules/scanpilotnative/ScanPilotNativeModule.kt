@@ -157,6 +157,46 @@ class ScanPilotNativeModule : Module() {
         }
     }
 
+    /**
+     * Scan page pipeline in compiled code (see PageProcessor): optional perspective
+     * warp of `quad` (8 numbers: TL, TR, BR, BL), then optional filter. Writes the
+     * warped page to `baseOutput` (when a quad is given) and the filtered page to
+     * `filteredOutput` (when the filter is not "original"). Runs off the UI thread.
+     */
+    AsyncFunction("processScanPage") { input: String, quad: List<Double>?, maxEdge: Int, filter: String, quality: Int, baseOutput: String?, filteredOutput: String? ->
+      val source = try {
+        PageProcessor.decode(fileFor(input).path)
+      } catch (e: OutOfMemoryError) {
+        throw PdfException("ERR_OUT_OF_MEMORY", "Not enough memory to process this photo.")
+      }
+      var base = source
+      val result = mutableMapOf<String, Any?>()
+      try {
+        if (quad != null && quad.size == 8) {
+          if (baseOutput == null) throw PdfException("ERR_ARGS", "baseOutput is required with a quad.")
+          base = PageProcessor.warp(source, quad.toDoubleArray(), maxEdge)
+          PageProcessor.save(base, fileFor(baseOutput).path, quality)
+          result["baseUri"] = Uri.fromFile(fileFor(baseOutput)).toString()
+        } else {
+          result["baseUri"] = input
+        }
+        result["baseWidth"] = base.width
+        result["baseHeight"] = base.height
+        if (filter != "original" && filteredOutput != null) {
+          val filtered = PageProcessor.filter(base, filter)
+          PageProcessor.save(filtered, fileFor(filteredOutput).path, quality)
+          result["uri"] = Uri.fromFile(fileFor(filteredOutput)).toString()
+          result["width"] = filtered.width
+          result["height"] = filtered.height
+          filtered.recycle()
+        }
+      } finally {
+        if (base !== source) base.recycle()
+        source.recycle()
+      }
+      result
+    }
+
     AsyncFunction("getPdfInfo") { uri: String ->
       openRenderer(uri).use { (renderer, _) ->
         val sizes = (0 until renderer.pageCount).map { index ->

@@ -21,6 +21,16 @@ export interface NativePdfInfo {
   pageSizes: [number, number][];
 }
 
+export interface ProcessedScanPage {
+  baseUri: string;
+  baseWidth: number;
+  baseHeight: number;
+  /** Present when a filter other than "original" was applied. */
+  uri?: string;
+  width?: number;
+  height?: number;
+}
+
 export interface OcrLine {
   text: string;
   left: number;
@@ -40,6 +50,16 @@ interface ScanPilotNativeModule {
   recognizeText(uri: string, script: 'latin' | 'devanagari'): Promise<OcrResult>;
   scanDocument(options: { pageLimit?: number; galleryImport?: boolean; mode?: 'base' | 'full' }): Promise<NativeScanResult>;
   getPdfInfo(uri: string): Promise<NativePdfInfo>;
+  /** Native decode → optional perspective warp → optional filter → JPEG (see PageProcessor.kt). */
+  processScanPage(
+    input: string,
+    quad: number[] | null,
+    maxEdge: number,
+    filter: string,
+    quality: number,
+    baseOutput: string | null,
+    filteredOutput: string | null,
+  ): Promise<ProcessedScanPage>;
   renderPdfPage(uri: string, pageIndex: number, dpi: number, quality: number, maxEdge: number, outputUri: string): Promise<RenderedPage>;
 }
 

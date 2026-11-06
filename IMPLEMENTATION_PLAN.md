@@ -228,3 +228,8 @@ App lock + biometrics, encrypted private folder, remove INTERNET permission from
 * Very large PDFs (> 40 MB) show "— pages" until first opened (page count comes from the native renderer).
 * Images→PDF keeps all page images in memory during creation; for very large batches (≫ 50 photos) a streaming writer may be needed (revisit in Milestone 2).
 * PDF links are not opened automatically (privacy); a confirm-to-open flow can be added.
+
+## Field fix — slow saving after each photo (30 s+ per page)
+Cause: every capture ran the whole pixel pipeline in JavaScript — full-size JPEG decode (jpeg-js), perspective warp, colour filter and two BMP→JPEG round trips. Hermes has no JIT, so these per-pixel loops on a ~4.6 MP photo took 20–30 s+ on mid-range phones.
+Fix: `PageProcessor.kt` in `modules/scanpilot-native` does decode → warp (`Matrix.setPolyToPoly`) → filter (ports of every filter in `filters.ts`, LUT for the Document curve) → JPEG natively, off the UI thread. `processCapturedPage`, `cropImage` and `filterImage` use it via `src/native/pageProcessor`; JS stays as the iOS/web fallback. Only the 320 px detection preview is still decoded in JS. Test: `nativeRouting.test.ts`.
+Device check: [ ] page appears within ~1–2 s after the shutter; [ ] Document/B&W/Whiteboard filters look as before; [ ] crop editor straighten is instant.
