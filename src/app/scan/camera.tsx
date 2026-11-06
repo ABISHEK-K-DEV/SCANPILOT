@@ -12,7 +12,7 @@ import { decodeBase64, type DocumentCameraHandle, type DocumentFrame, NativeDocu
 import { detectDocumentQuad } from '@/services/scan/detect';
 import { hasCameraRequest, resolveCameraRequest } from '@/services/scan/cameraBridge';
 import { type ScanMode, SCAN_MODES, captureHint, scanMode } from '@/services/scan/modes';
-import { choosePictureSize, LIVE_STEADY_FRAMES, nextSteady, photoToPreview, smoothQuad, STEADY_FRAMES } from '@/services/scan/autoCapture';
+import { choosePictureSize, LIVE_STEADY_FRAMES, nextRearm, nextSteady, photoToPreview, REARM_FRAMES, smoothQuad, STEADY_FRAMES } from '@/services/scan/autoCapture';
 import type { Quad } from '@/services/scan/geometry';
 import { autoCropPage, deleteFileQuietly, detectQuadInImage, filterImage, ingestImage, processCapturedPage, splitSpread } from '@/services/scan/pageProcessing';
 import { pickPages } from '@/services/scan/scanService';
@@ -310,6 +310,9 @@ export default function CameraScreen() {
     void (async () => {
       let last: Quad | null = null;
       let count = 0;
+      // The page just captured: no new capture until the scene changes (see nextRearm).
+      let captured: Quad | null = null;
+      let rearm = 0;
       while (!cancelled) {
         if (busyRef.current) {
           await sleep(400);
@@ -325,13 +328,22 @@ export default function CameraScreen() {
           snapUri = snap.uri;
           const quad = await detectQuadInImage(snap.uri, snap.width, snap.height);
           if (cancelled) break;
-          count = nextSteady(last, quad, count, Math.max(snap.width, snap.height));
+          if (captured) {
+            rearm = nextRearm(captured, quad, rearm, Math.max(snap.width, snap.height));
+            if (rearm >= 2) {
+              captured = null;
+              rearm = 0;
+            }
+          }
+          count = captured ? 0 : nextSteady(last, quad, count, Math.max(snap.width, snap.height));
           last = quad;
           setLive(quad ? { quad, width: snap.width, height: snap.height } : null);
           setSteady(Math.min(1, count / STEADY_FRAMES));
           if (quad && count >= STEADY_FRAMES && !busyRef.current) {
             count = 0;
             last = null;
+            captured = quad;
+            rearm = 0;
             const uri = snap.uri;
             snapUri = null; // kept: it becomes the page
             flashOverlay.setValue(1);
@@ -362,7 +374,15 @@ export default function CameraScreen() {
   }, [autoActive, captureMode]);
 
   // Live frames (native camera): detect on every frame, glide the outline, capture when steady.
-  const liveTrack = useRef<{ last: Quad | null; count: number; smooth: Quad | null; coolUntil: number }>({ last: null, count: 0, smooth: null, coolUntil: 0 });
+  // `captured`: the page just taken; auto-capture waits until the scene changes before the next one.
+  const liveTrack = useRef<{ last: Quad | null; count: number; smooth: Quad | null; coolUntil: number; captured: Quad | null; rearm: number }>({
+    last: null,
+    count: 0,
+    smooth: null,
+    coolUntil: 0,
+    captured: null,
+    rearm: 0,
+  });
   const onLiveFrame = (frame: DocumentFrame) => {
     if (!autoActive || busyRef.current) return;
     const t = liveTrack.current;
@@ -373,7 +393,15 @@ export default function CameraScreen() {
     } catch {
       quad = null;
     }
-    t.count = nextSteady(t.last, quad, t.count, Math.max(frame.width, frame.height));
+    const longEdge = Math.max(frame.width, frame.height);
+    if (t.captured) {
+      t.rearm = nextRearm(t.captured, quad, t.rearm, longEdge);
+      if (t.rearm >= REARM_FRAMES) {
+        t.captured = null;
+        t.rearm = 0;
+      }
+    }
+    t.count = t.captured ? 0 : nextSteady(t.last, quad, t.count, longEdge);
     t.last = quad;
     t.smooth = quad ? smoothQuad(t.smooth, quad) : null;
     setLive(t.smooth ? { quad: t.smooth, width: frame.width, height: frame.height } : null);
@@ -384,6 +412,8 @@ export default function CameraScreen() {
     t.last = null;
     t.smooth = null;
     t.coolUntil = Date.now() + 1800;
+    t.captured = quad;
+    t.rearm = 0;
     setLive(null);
     setSteady(0);
     busyRef.current = true;

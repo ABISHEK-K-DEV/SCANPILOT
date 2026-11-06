@@ -20,6 +20,19 @@ export function nextSteady(previous: Quad | null, current: Quad | null, count: n
 }
 
 /**
+ * After an auto-capture the camera usually still sees the same page. To avoid
+ * saving it again and again, auto-capture stays disarmed until the scene has
+ * changed: the page left the frame or moved clearly (more than `fraction` of
+ * the long edge) for REARM_FRAMES detections in a row. Returns the new count of
+ * consecutive "changed" detections; re-arm once it reaches REARM_FRAMES.
+ */
+export const REARM_FRAMES = 3;
+export function nextRearm(captured: Quad, current: Quad | null, count: number, longEdge: number, fraction = 0.12): number {
+  if (!current || !quadsClose(captured, current, longEdge, fraction)) return count + 1;
+  return 0;
+}
+
+/**
  * Maps a quad from photo pixels to preview points for a preview that fills
  * the view with "cover" scaling (centred crop), as CameraView does.
  */

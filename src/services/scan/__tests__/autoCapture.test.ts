@@ -1,4 +1,4 @@
-import { choosePictureSize, LIVE_STEADY_FRAMES, nextSteady, smoothQuad, photoToPreview, quadsClose, STEADY_FRAMES } from '../autoCapture';
+import { choosePictureSize, LIVE_STEADY_FRAMES, nextRearm, nextSteady, REARM_FRAMES, smoothQuad, photoToPreview, quadsClose, STEADY_FRAMES } from '../autoCapture';
 import type { Quad } from '../geometry';
 
 const q = (dx = 0): Quad => [
@@ -44,5 +44,18 @@ describe('auto-capture', () => {
     expect(mid[0].x).toBe(150);
     expect(smoothQuad(null, b)).toBe(b);
     expect(LIVE_STEADY_FRAMES).toBeGreaterThanOrEqual(5);
+  });
+
+  it('does not re-arm while the same page stays in view (no duplicate pages)', () => {
+    const page = q();
+    let count = 0;
+    // The camera keeps seeing the captured page, with small jitter: never re-arms.
+    for (let i = 0; i < 50; i++) count = nextRearm(page, q(i % 2 ? 20 : -20), count, 1200);
+    expect(count).toBe(0);
+    // The page leaves the frame (or a new one is placed elsewhere): re-arms after REARM_FRAMES.
+    for (let i = 0; i < REARM_FRAMES; i++) count = nextRearm(page, i % 2 ? null : q(400), count, 1200);
+    expect(count).toBe(REARM_FRAMES);
+    // One flicker back to the old page resets it.
+    expect(nextRearm(page, q(), 2, 1200)).toBe(0);
   });
 });

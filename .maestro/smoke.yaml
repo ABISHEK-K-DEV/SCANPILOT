@@ -61,6 +61,15 @@ appId: app.scanpilot
     visible: "Manual capture"
     timeout: 20000
 - tapOn: "Manual capture"
+# The tap can land while the guide is still closing: make sure Manual is on,
+# otherwise auto-capture keeps adding pages of the emulator's static scene.
+- runFlow:
+    when:
+      notVisible:
+        text: "Manual capture"
+        checked: true
+    commands:
+      - tapOn: "Manual capture"
 - takeScreenshot: e2e-results/04-camera
 # Wait until the camera is streaming (the shutter is enabled), then shoot.
 - extendedWaitUntil:
